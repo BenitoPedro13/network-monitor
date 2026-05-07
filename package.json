@@ -1,0 +1,21 @@
+{
+  "name": "network-monitor-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.1",
+  "scripts": {
+    "bootstrap": "pnpm run infra:up && pnpm install && pnpm run db:migrate",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f --tail=100",
+    "db:migrate": "pnpm --filter @network-monitor/api run db:migrate",
+    "db:seed": "pnpm --filter @network-monitor/api run db:seed",
+    "dev": "pnpm --filter @network-monitor/api run dev",
+    "test": "pnpm --filter @network-monitor/api run test",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

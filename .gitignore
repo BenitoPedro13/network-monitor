@@ -1,0 +1,32 @@
+node_modules/
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build artifacts
+dist/
+build/
+coverage/
+.turbo/
+
+# Runtime data
+tmp/
+data/
+adguardhome/work/
+adguardhome/conf/
+postgres-data/
+
+# IDE
+.vscode/
+.idea/
