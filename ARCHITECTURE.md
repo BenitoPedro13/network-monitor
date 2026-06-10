@@ -27,7 +27,7 @@ DNS was chosen as the capture layer because:
 │   MacBook  │  iPhone  │  iPad  │  (others as needed)           │
 │            DNS manually set to host machine IP                  │
 └────────────────────────┬────────────────────────────────────────┘
-                         │ DNS queries (UDP/TCP port 18053 → 53)
+                         │ DNS queries (UDP/TCP port 53, host networking)
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                  AdGuard Home  (Docker)                         │
@@ -293,7 +293,7 @@ apps/api/src/
 
 **Cursor strategy:** `CursorService` persists the newest processed `queriedAt` to `SystemState.key = 'collector_cursor'`. Survives restarts. On first run defaults to `now() - COLLECTOR_BACKFILL_HOURS`.
 
-**Note on Docker Desktop (macOS):** When AdGuard runs in Docker on macOS, the client IP for queries originating from the host machine appears as a Docker NAT address (e.g. `185.199.108.153`) rather than the host's LAN IP. This is a Docker Desktop networking artifact. Devices on the LAN connecting to AdGuard via its DNS port appear with their real IPs.
+**Note on Docker Desktop (macOS):** With Docker port-forwarding, the client IP AdGuard reports is an unstable echo of the container's own outbound flows (e.g. its DoH upstream's address) — meaningless for device mapping and rotating on every Docker restart (root cause in `docs/tasks/13-unknown-ip-visibility.md`). The AdGuard container therefore runs with **`network_mode: host`** (requires Docker Desktop ≥ 4.34 with *Settings → Resources → Network → Enable host networking*). Host-originated queries then arrive as loopback (`::1` / `127.0.0.1`), which is stable and registered as a Device row. How LAN devices appear through the host-networking relay must be verified with a real device before registering them.
 
 ### 6.3 Anomaly Detection Rules
 
@@ -441,9 +441,8 @@ POSTGRES_DB=network_monitor
 POSTGRES_PORT=5433
 DATABASE_URL=postgresql://network_monitor:network_monitor@localhost:5433/network_monitor?schema=public
 
-# AdGuard Home (existing)
-ADGUARD_WEB_PORT=3000
-ADGUARD_DNS_PORT=18053
+# AdGuard Home runs with host networking — binds host ports 53 (DNS) and
+# 3000 (web UI) directly; no port mapping vars
 
 # AdGuard Home credentials (new — set during AdGuard wizard)
 ADGUARD_URL=http://localhost:3000
@@ -510,7 +509,7 @@ Example seed entries:
 - [x] Build `CursorService` (SystemState read/write)
 - [x] Build `WriterService` (geo enrichment + bulk insert with skipDuplicates)
 - [x] Build `CollectorService` — orchestrates polling loop via `onModuleInit` + `SchedulerRegistry`
-- [ ] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
+- [x] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
 
 **Devices & Grafana**
 - [ ] Update seed script with real device IPs (MacBook, iPhone, iPad)

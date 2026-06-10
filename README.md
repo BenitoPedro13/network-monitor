@@ -14,7 +14,7 @@ Home network DNS monitoring tool. Captures DNS queries from personal devices via
 
 ## Quick Start
 
-1. Copy env file and fill in credentials:
+1. Copy env file and fill in credentials (`ADGUARD_USER`/`ADGUARD_PASSWORD`, `MAXMIND_LICENSE_KEY`):
 
 ```bash
 cp .env.example .env
@@ -26,7 +26,7 @@ cp .env.example .env
 pnpm run bootstrap
 ```
 
-This automatically: installs dependencies, starts Postgres, generates Prisma Client, applies migrations, runs seed, and typechecks.
+This automatically: installs dependencies, starts Postgres, generates Prisma Client, applies migrations, runs seed, downloads the GeoLite2 databases (if `MAXMIND_LICENSE_KEY` is set), and typechecks. At the end it prints the checklist of manual host-level steps (DNS setting, Docker host-networking toggle).
 
 To also start AdGuard Home and Grafana:
 
@@ -34,7 +34,7 @@ To also start AdGuard Home and Grafana:
 pnpm run bootstrap:full
 ```
 
-3. AdGuard runs with host networking and binds ports 53 (DNS) and 3000 (web UI) directly on the host. On macOS, enable **Docker Desktop → Settings → Resources → Network → Enable host networking** first (one-time). Then complete the AdGuard Home wizard at `http://localhost:3000` and set `ADGUARD_USER` and `ADGUARD_PASSWORD` in your `.env`.
+3. AdGuard runs with host networking and binds ports 53 (DNS) and 3000 (web UI) directly on the host. On macOS, enable **Docker Desktop → Settings → Resources → Network → Enable host networking** first (one-time). Its config is rendered automatically from `adguardhome/AdGuardHome.template.yaml` using your `.env` credentials — no setup wizard. (The wizard only appears if you start AdGuard without `ADGUARD_USER`/`ADGUARD_PASSWORD` set.)
 
 4. Download MaxMind GeoLite2 databases (free, requires registration):
    - Register at maxmind.com → Account → Manage License Keys → Create new key

@@ -2,7 +2,7 @@
 
 **Phase:** 1 — Foundation  
 **Group:** Infrastructure  
-**Status:** Pending  
+**Status:** In Progress  
 **Date:** 2026-06-10
 
 ---
@@ -52,7 +52,7 @@ Keep it idempotent — safe to rerun after fixing any step.
 |---|---|
 | `adguardhome/AdGuardHome.template.yaml` | New — version-controlled AdGuard config template |
 | `scripts/bootstrap.sh` | Extended — AdGuard render, geoip, test:infra, checklist |
-| `.gitignore` | Un-ignore the template (keep `adguardhome/work` + rendered conf ignored) |
+| `.gitignore` | No change — template lives at `adguardhome/AdGuardHome.template.yaml`, outside the ignored `conf/`/`work/` dirs |
 | `README.md` | Replace setup steps with `pnpm run bootstrap` + manual checklist |
 
 ---
@@ -67,12 +67,15 @@ Keep it idempotent — safe to rerun after fixing any step.
 
 ## How to Verify
 
+Verified at implementation time (2026-06-10): `bash -n` syntax check; template render tested in isolation (bcrypt via `htpasswd -B`, sed substitution → valid YAML, zero placeholders left). The full fresh-machine path was **not** run against the live setup (it would wipe the working AdGuard state):
+
 ```bash
-# simulate a fresh machine
+# on a fresh machine / disposable checkout
 pnpm run infra:down
 rm -rf adguardhome/conf adguardhome/work .env
-pnpm run bootstrap   # follow prompts
-pnpm run test:infra
+pnpm run bootstrap        # copies .env, exits asking for credentials
+# fill .env, then:
+pnpm run bootstrap:full   # renders AdGuard config, full stack, smoke tests
 dig @127.0.0.1 example.com   # resolves; querylog shows the query
 ```
 
