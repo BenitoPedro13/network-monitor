@@ -47,6 +47,17 @@ export class CollectorService implements OnModuleInit {
         .map((e) => this.mapper.toDnsEvent(e, deviceMap))
         .filter((e): e is NonNullable<typeof e> => e !== null);
 
+      const unknown = this.mapper.countUnknownClients(events, deviceMap);
+      if (unknown.size > 0) {
+        const droppedTotal = [...unknown.values()].reduce((a, b) => a + b, 0);
+        const detail = [...unknown.entries()]
+          .map(([ip, count]) => `${ip} (${count})`)
+          .join(', ');
+        this.logger.warn(
+          `Dropped ${droppedTotal}/${events.length} events from unregistered IPs: ${detail}`,
+        );
+      }
+
       if (mapped.length > 0) {
         await this.writer.write(mapped);
         await this.anomaly.runRules(mapped);

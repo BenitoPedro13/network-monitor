@@ -77,4 +77,4 @@ Open http://localhost:3001 → Overview shows the Open Alerts stat + table; Per-
 
 ## Next Task
 
-**Task 13** — update `scripts/seed.ts` with real device IPs (MacBook, iPhone, iPad); last open Phase 1 item.
+**Task 13** — unknown-IP drop logging + unstable client IP investigation. **Task 14** — update `scripts/seed.ts` with real device IPs; last open Phase 1 checklist item.

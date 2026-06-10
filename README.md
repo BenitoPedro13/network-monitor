@@ -34,7 +34,7 @@ To also start AdGuard Home and Grafana:
 pnpm run bootstrap:full
 ```
 
-3. Complete the AdGuard Home wizard at `http://localhost:3000`, then set `ADGUARD_USER` and `ADGUARD_PASSWORD` in your `.env`.
+3. AdGuard runs with host networking and binds ports 53 (DNS) and 3000 (web UI) directly on the host. On macOS, enable **Docker Desktop → Settings → Resources → Network → Enable host networking** first (one-time). Then complete the AdGuard Home wizard at `http://localhost:3000` and set `ADGUARD_USER` and `ADGUARD_PASSWORD` in your `.env`.
 
 4. Download MaxMind GeoLite2 databases (free, requires registration):
    - Register at maxmind.com → Account → Manage License Keys → Create new key
@@ -50,7 +50,7 @@ Files (`GeoLite2-City.mmdb` ~60MB, `GeoLite2-ASN.mmdb` ~8MB) are saved to `./geo
 5. Validate DNS is working through AdGuard:
 
 ```bash
-dig google.com @127.0.0.1 -p 18053
+dig google.com @127.0.0.1
 ```
 
 ## Useful Commands

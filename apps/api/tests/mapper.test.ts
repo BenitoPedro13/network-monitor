@@ -29,6 +29,27 @@ describe('MapperService', () => {
     });
   });
 
+  describe('countUnknownClients', () => {
+    it('aggregates counts per unregistered IP', () => {
+      const events = [
+        baseEvent,
+        { ...baseEvent, client: '149.112.112.10' },
+        { ...baseEvent, client: '149.112.112.10' },
+        { ...baseEvent, client: '10.0.0.99' },
+      ];
+      const unknown = mapper.countUnknownClients(events, deviceMap);
+      assert.equal(unknown.size, 2);
+      assert.equal(unknown.get('149.112.112.10'), 2);
+      assert.equal(unknown.get('10.0.0.99'), 1);
+      assert.equal(unknown.has('192.168.1.10'), false);
+    });
+
+    it('returns an empty map when all clients are registered', () => {
+      const unknown = mapper.countUnknownClients([baseEvent, baseEvent], deviceMap);
+      assert.equal(unknown.size, 0);
+    });
+  });
+
   describe('toDnsEvent', () => {
     it('maps a standard event correctly', () => {
       const result = mapper.toDnsEvent(baseEvent, deviceMap);

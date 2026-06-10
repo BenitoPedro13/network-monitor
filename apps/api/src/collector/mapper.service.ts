@@ -18,6 +18,18 @@ export class MapperService {
     return new Map(devices.map((d) => [d.ipAddress, d.id]));
   }
 
+  countUnknownClients(
+    events: AdGuardEvent[],
+    deviceMap: Map<string, string>,
+  ): Map<string, number> {
+    const unknown = new Map<string, number>();
+    for (const event of events) {
+      if (deviceMap.has(event.client)) continue;
+      unknown.set(event.client, (unknown.get(event.client) ?? 0) + 1);
+    }
+    return unknown;
+  }
+
   toDnsEvent(
     event: AdGuardEvent,
     deviceMap: Map<string, string>,
