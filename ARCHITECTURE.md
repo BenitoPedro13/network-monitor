@@ -504,10 +504,10 @@ Example seed entries:
 - [x] Build `collector/geo/` module (lookup + cache)
 - [x] Build `collector/poll.ts` (AdGuard API fetch)
 - [x] Build `collector/mapper.ts` (AdGuard event → DnsEvent shape)
-- [ ] Build `collector/cursor.ts` (SystemState read/write)
-- [ ] Build `collector/writer.ts` (bulk insert with geo enrichment)
+- [x] Build `collector/cursor.ts` (SystemState read/write)
+- [x] Build `collector/writer.ts` (bulk insert with geo enrichment)
 - [ ] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
-- [ ] Update `apps/api/src/index.ts` to start the polling loop
+- [x] `CollectorService` orchestrates the polling loop (`onModuleInit` + `SchedulerRegistry`)
 - [ ] Add `pnpm run collector:dev` script
 
 **Devices & Grafana**

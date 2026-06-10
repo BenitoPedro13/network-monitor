@@ -34,7 +34,6 @@ export class PollService {
     const url = new URL('/control/querylog', base);
     url.searchParams.set('limit', '1000');
     url.searchParams.set('response_status', 'all');
-    if (cursor) url.searchParams.set('older_than', cursor);
 
     const credentials = Buffer.from(`${user}:${pass}`).toString('base64');
 
@@ -50,7 +49,9 @@ export class PollService {
     }
 
     const body = (await res.json()) as AdGuardQueryLogResponse;
-    this.logger.debug(`Fetched ${body.data.length} events from AdGuard`);
-    return body.data;
+    const data = body.data;
+    this.logger.debug(`Fetched ${data.length} raw events from AdGuard`);
+    if (!cursor) return data;
+    return data.filter((e) => e.time > cursor);
   }
 }
