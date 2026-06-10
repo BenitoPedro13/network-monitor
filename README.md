@@ -67,3 +67,11 @@ pnpm run geoip:update         # download/update MaxMind GeoLite2 .mmdb databases
 pnpm run test:infra           # smoke test — checks all services are healthy
 pnpm run test                 # unit tests for collector modules
 ```
+
+## Roadmap
+
+Phase 1 (DNS pipeline) and Phase 2a (DoH blocking) are complete. Planned next — see `docs/tasks/` and `ARCHITECTURE.md`:
+
+- **Flow capture (Phase 2b, Tasks 19–20):** a passive **Zeek** sensor on `en0` records connection metadata (`NetworkFlow` table) — WebRTC/UDP media, DoH-by-IP, TLS SNI hostnames, and "connections with no DNS provenance" — the things DNS structurally can't see. Passive and always-on-safe for this Mac (no routing change). Adds a Zeek install + `scripts/zeek-sensor.sh`.
+- **Gateway investigation mode (Task 21):** optionally route another device (the phone) *through* the Mac so the same sensor sees its traffic. On-demand only — the routed device depends on the Mac while enabled.
+- **Phase 5:** move the stack to an always-on Raspberry Pi gateway for network-wide capture without the per-device routing tradeoff.

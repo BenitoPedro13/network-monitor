@@ -121,8 +121,21 @@ filters:
     url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
     name: AdAway Default Blocklist
     id: 2
+  - enabled: true
+    url: https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/doh.txt
+    name: HaGeZi Encrypted DNS Bypass
+    id: 3
 whitelist_filters: []
-user_rules: []
+# Phase 2a — force well-behaved apps off DoH/DoT and back to plain DNS;
+# use-application-dns.net is Mozilla's canary (blocking it disables Firefox DoH)
+user_rules:
+  - '||use-application-dns.net^'
+  - '||dns.google^'
+  - '||cloudflare-dns.com^'
+  - '||mozilla.cloudflare-dns.com^'
+  - '||one.one.one.one^'
+  - '||dns.quad9.net^'
+  - '||doh.opendns.com^'
 dhcp:
   enabled: false
   interface_name: ""

@@ -190,6 +190,35 @@ model Alert {
 - `61–80` — elevated, review soon
 - `81–100` — high priority, act now
 
+### 4.5 NetworkFlow
+
+Connection-level records from the **packet sensor** (Zeek on `en0`), capturing what DNS structurally cannot: WebRTC/UDP media, DoH-by-hardcoded-IP, cached-DNS reconnections, and raw-IP traffic. One row per connection. Populated by the `flow/` ingest module from Zeek's `conn.log` (+ `ssl.log` for the TLS SNI hostname). Geo-enriched against the same `IpGeoCache` as DNS. See `docs/tasks/19-flow-capture.md`.
+
+```prisma
+model NetworkFlow {
+  id          String   @id @default(cuid())
+  uid         String?  @unique          // Zeek connection uid — joins conn.log ↔ ssl.log
+  srcIp       String
+  dstIp       String
+  dstPort     Int
+  protocol    String                    // tcp | udp | icmp
+  service     String?                   // Zeek-guessed: ssl, http, quic, ...
+  serverName  String?                   // TLS SNI hostname from ssl.log (null if not TLS)
+  bytes       BigInt                    // orig_bytes + resp_bytes
+  duration    Float?                    // seconds
+  connState   String?                   // Zeek conn_state (S0, SF, REJ, ...)
+  startedAt   DateTime
+  deviceId    String?                   // mapped from srcIp; null if unknown
+  hadDnsQuery Boolean?                  // was dstIp resolved via a recent DnsEvent? false = no DNS provenance
+  createdAt   DateTime @default(now())
+
+  @@index([deviceId, startedAt])
+  @@index([dstIp, startedAt])
+}
+```
+
+**Why both layers:** DNS is the cheap, name-rich, fleet-wide spine (one tiny event per lookup, gives hostnames before the connection, works for every device pointing at the resolver). Flow capture is the expensive, IP-level, interface-local fill for DNS's blind spots. Neither subsumes the other — DNS gives *intent/names*, flows give *connections/volume*. `NetworkFlow.dstIp` joins `IpGeoCache` (shared geomap) and correlates with `DnsEvent.responseIp` (the `hadDnsQuery` provenance check).
+
 ---
 
 ## 5. AdGuard Home API Contract
@@ -268,7 +297,16 @@ apps/api/src/
     ├── mapper.service.ts          ← AdGuard event → DnsEventInput; skips unknown IPs
     ├── cursor.service.ts          ← SystemState key='collector_cursor' read/write
     └── writer.service.ts          ← geo-enriches batch then createMany(skipDuplicates)
+
+# Phase 2b flow layer (planned, Tasks 19–21) — mirrors collector/
+└── flow/
+    ├── flow.service.ts            ← @Interval; reads new Zeek log lines since cursor
+    ├── reader.service.ts          ← tails Zeek conn.log/ssl.log JSON by byte offset (SystemState key='flow_cursor')
+    ├── mapper.service.ts          ← Zeek conn record → NetworkFlowInput; srcIp→Device; drops internal/noise
+    └── writer.service.ts          ← geo-enriches dstIp (shared IpGeoCache) + createMany; ssl.log updates serverName by uid
 ```
+
+Sensor (outside the Node app): **Zeek** on `en0` writing JSON `conn.log`/`ssl.log` to `zeek/logs/`, started via `scripts/zeek-sensor.sh` (passive, sudo for BPF). Postgres + Grafana stay in Docker; AdGuard stays native; Zeek is a third native sensor.
 
 ### 6.2 Polling Loop
 
@@ -526,24 +564,24 @@ Example seed entries:
 
 DNS-only monitoring has structural blind spots: apps using DNS-over-HTTPS (DoH) bypass AdGuard entirely, WebRTC/UDP flows are never resolved via DNS, and cached results produce no query at all.
 
-**2a — Block DoH providers at AdGuard**
-- Block domains of major DoH providers (`dns.google`, `cloudflare-dns.com`, `mozilla.cloudflare-dns.com`, etc.) in AdGuard's custom filter rules
+**2a — Block DoH providers at AdGuard** ✅ Done 2026-06-10 (Task 18)
+- HaGeZi "Encrypted DNS Bypass" blocklist (maintained, encrypted-DNS-only — deliberately not the broader VPN/proxy variant) + explicit user rules for major providers and Mozilla's `use-application-dns.net` canary
 - Forces Chromium/Electron apps (Discord, Chrome, VS Code) to fall back to plain DNS through AdGuard
-- Zero infrastructure change — AdGuard configuration only
+- Coverage measure, not anti-evasion: custom/unknown DoH endpoints require flow-level detection (Phase 5). After 2a, any remaining encrypted-DNS use is itself a suspicion signal
 
-**2b — TLS SNI extraction**
-- New service reads TLS Client Hello packets from the network interface (`tcpdump`/`libpcap` or a Go sidecar)
-- Extracts the unencrypted SNI field — the target hostname — visible even when DoH is used
-- New table: `TlsConnection(srcIp, hostname, dstIp, dstPort, seenAt)`
-- Enriches with geo data via existing `IpGeoCache`
-- Covers HTTPS connections that produce no DNS query (already-cached, DoH-bypassed, hardcoded IPs)
+**2b — Network flow capture (Zeek sensor)** — planned, Tasks 19–21
+- **Zeek** runs as a passive sensor on `en0` → `conn.log` (flows) + `ssl.log` (TLS SNI hostnames). One tool replaces the old standalone "SNI extraction" idea; its `ssl.log` *is* the SNI extractor and its `conn.log` *is* the flow log.
+- New `NetworkFlow` table (§4.5); ingest via a NestJS `flow/` module mirroring the collector; geo via shared `IpGeoCache`.
+- **Task 19** — sensor + schema + ingest (Mac's own traffic; passive, always-on-safe, no availability risk).
+- **Task 20** — `NO_DNS_CONNECTION` rule (connections with no DNS provenance) + Grafana flow dashboard.
+- **Task 21** — gateway investigation mode: route the phone *through* the Mac (pf NAT) so the same sensor sees its traffic. On-demand only — the phone depends on the Mac while enabled.
 
-**2c — Anomaly rules**
+**2c — Anomaly rules** ✅ Done 2026-06-10 — pulled forward into Phase 1 (Task 11)
 - `unknownDomain` — first time a device queries a domain within 30 days
 - `highFrequency` — >100 queries to same domain from same device in 5 min
 - `threatMatch` — domain appears in AdGuard blocked list
 
-**Limitation:** the MacBook is a DNS server, not a network gateway. SNI capture on the MacBook only sees its own traffic. Full network-wide SNI/flow capture requires Phase 5 (Pi gateway).
+**Limitation:** the MacBook is a DNS server, not a network gateway. Passive flow capture on `en0` sees the Mac's own traffic for free; seeing another device's traffic requires routing it through the Mac (Task 21, with the availability cost) or the Phase 5 Pi gateway (always-on, network-wide).
 
 ### Phase 3 — Threat Intelligence (future)
 
@@ -560,13 +598,13 @@ DNS-only monitoring has structural blind spots: apps using DNS-over-HTTPS (DoH) 
 
 ### Phase 5 — Gateway + Full Network Coverage (future)
 
+The always-on, network-wide version of the Task 19–21 flow layer. Zeek, the `NetworkFlow` schema, and the flow dashboards/rules are introduced on the Mac in Phase 2b and **carry over unchanged** — the Pi just inherits the sensor in a position where it sees everything, without the availability tradeoff.
+
 - Move stack to a Raspberry Pi (always-on, low power) acting as the **network gateway** (not just DNS server)
-- All device traffic routes through the Pi → enables network-wide packet capture
-- Run **Zeek** or **Suricata** as a passive IDS/sensor for SNI extraction and flow metadata on all devices
-- New table: `NetworkFlow(srcIp, dstIp, dstPort, protocol, bytes, duration, startedAt)`
+- All device traffic routes through the Pi → network-wide packet capture with no per-device gateway hack
+- Same **Zeek** sensor + `NetworkFlow` ingest as Phase 2b, now fleet-wide; optionally Suricata for IDS signatures
 - Join flows with DNS/SNI data in Grafana for a complete picture: what every device talked to, how much data, from where
-- Anomaly detection on flow volume, not just DNS frequency
-- Per-owner grouping for household visibility
+- Anomaly detection on flow volume, not just DNS frequency; per-owner grouping for household visibility
 
 ---
 
@@ -574,23 +612,27 @@ DNS-only monitoring has structural blind spots: apps using DNS-over-HTTPS (DoH) 
 
 DNS-based monitoring captures domain lookups, not connections. Understanding the gaps is essential for interpreting the data.
 
-| Traffic type | Captured? | Why |
-|---|---|---|
-| Standard DNS (A, AAAA, CNAME, MX) | ✅ Yes | Hits AdGuard resolver |
-| First HTTPS connection to a domain | ✅ Yes (via DNS) | DNS lookup happens before TLS |
-| Repeated connections within DNS TTL | ⚠️ Partial | Cached result — no query to AdGuard |
-| DNS-over-HTTPS (DoH) traffic | ❌ No | Bypasses system resolver entirely |
-| DNS-over-TLS (DoT) traffic | ❌ No | Same as DoH |
-| WebRTC / UDP voice/video (Discord) | ❌ No | No DNS lookup at connection time |
-| Hardcoded IPs (some CDNs, P2P) | ❌ No | No domain, no lookup |
-| QUIC / HTTP3 connections | ⚠️ Partial | DNS lookup captured, but flow invisible |
+"Flow" = captured by the Zeek sensor (Phase 2b, Mac / gateway-routed devices).
+
+| Traffic type | DNS layer | Flow layer (2b) | Why |
+|---|---|---|---|
+| Standard DNS (A, AAAA, CNAME, MX) | ✅ Yes | — | Hits AdGuard resolver |
+| First HTTPS connection to a domain | ✅ Yes | ✅ flow + SNI | DNS lookup before TLS; Zeek `ssl.log` SNI |
+| Repeated connections within DNS TTL | ⚠️ Partial | ✅ flow | Cached — no AdGuard query, but the packets still flow |
+| DNS-over-HTTPS (DoH), known provider | ✅ blocked (2a) | ✅ flow | 2a blocks the hostname; flow sees the attempt |
+| DoH to a hardcoded IP / custom resolver | ❌ No | ✅ flow (`hadDnsQuery=false`) | No hostname to block; flow has no DNS provenance |
+| DNS-over-TLS (DoT) | ⚠️ 2a-blockable | ✅ flow (port 853) | Distinct port 853 is a dead giveaway in flows |
+| WebRTC / UDP voice/video (Discord) | ❌ No | ✅ flow | No DNS lookup, but UDP media crosses the interface |
+| Hardcoded IPs (some CDNs, P2P) | ❌ No | ✅ flow (`hadDnsQuery=false`) | No domain, no lookup — but a flow exists |
+| QUIC / HTTP3 connections | ⚠️ Partial | ✅ flow | DNS lookup captured; flow adds the connection |
 
 **What Phase 2 adds:**
-- Blocking DoH providers in AdGuard forces most apps back to plain DNS → surfaces Discord, Chrome, Electron apps
-- TLS SNI extraction reveals hostnames for connections with no DNS query
+- 2a (done): blocking DoH providers forces most apps back to plain DNS → surfaces Discord, Chrome, Electron apps; remaining encrypted-DNS use becomes a suspicion signal
+- 2b (planned): Zeek flow capture on `en0` records WebRTC/UDP media, DoH-by-IP, and DNS-less connections for the **Mac**; `ssl.log` recovers TLS SNI hostnames; `hadDnsQuery` flags connections with no DNS provenance
+- 2b/Task 21: routing the phone through the Mac extends all of the above to the phone, on-demand
 
-**What requires Phase 5 (Pi gateway):**
-- WebRTC flows, raw UDP traffic, byte-level volume data for all network devices
+**What still requires Phase 5 (Pi gateway):**
+- Always-on, network-wide flow/WebRTC/volume capture for *all* devices without the per-device gateway hack or its availability cost
 
 ## 12. Key Risks and Mitigations
 
