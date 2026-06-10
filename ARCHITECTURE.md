@@ -79,7 +79,7 @@ DNS was chosen as the capture layer because:
 | Layer | Technology | Reason |
 |---|---|---|
 | DNS sinkhole / logger | AdGuard Home | Already in stack, REST API, source IP attribution |
-| Collector runtime | Node.js + TypeScript (tsx) | Matches existing monorepo stack |
+| Collector runtime | NestJS 11 (Node.js + TypeScript) | Dependency injection, lifecycle hooks, `@nestjs/schedule` for intervals |
 | ORM | Prisma 6 | Already in stack, schema already migrated |
 | Database | PostgreSQL 16 | Already in stack |
 | IP Geolocation | MaxMind GeoLite2 (offline .mmdb) | Free, no rate limits, no external calls at runtime, city + ASN level accuracy |
@@ -245,52 +245,55 @@ Content-Type: application/json
 
 ## 6. Collector Service Design
 
-**Location:** `apps/api/src/collector.ts` (entry point), extracted into modules.
+**Location:** `apps/api/src/` — NestJS application, started via `nest start`.
 
 ### 6.1 Module Structure
 
 ```
 apps/api/src/
-├── index.ts              ← starts the collector loop
-├── collector/
-│   ├── poll.ts           ← fetches AdGuard API, returns raw events
-│   ├── mapper.ts         ← maps raw AdGuard event → DnsEvent shape
-│   ├── writer.ts         ← upserts DnsEvent + IpGeoCache rows via Prisma
-│   ├── cursor.ts         ← manages last-seen timestamp (in-memory + DB)
-│   ├── geo/
-│   │   ├── index.ts      ← exports enrichIp(ip) → GeoResult
-│   │   ├── lookup.ts     ← reads GeoLite2-City.mmdb + GeoLite2-ASN.mmdb via maxmind npm pkg
-│   │   └── cache.ts      ← checks IpGeoCache before calling lookup, writes new entries
-│   └── anomaly/
-│       ├── index.ts      ← orchestrates rules after each batch
-│       ├── unknownDomain.ts
-│       ├── highFrequency.ts
-│       └── threatMatch.ts
+├── main.ts                        ← NestJS bootstrap (ApplicationContext, no HTTP)
+├── app.module.ts                  ← root module; ConfigModule reads .env via INIT_CWD
+├── prisma/
+│   ├── prisma.module.ts           ← global module
+│   └── prisma.service.ts          ← extends PrismaClient
+├── geo/
+│   ├── geo.module.ts
+│   ├── lookup.service.ts          ← reads GeoLite2-City.mmdb + GeoLite2-ASN.mmdb
+│   ├── cache.service.ts           ← IpGeoCache read/write; skips RFC1918 IPs
+│   └── updater.service.ts         ← weekly .mmdb refresh via @Interval
+└── collector/
+    ├── collector.module.ts
+    ├── collector.service.ts       ← polling loop: onModuleInit + SchedulerRegistry
+    ├── poll.service.ts            ← AdGuard API fetch; filters time > cursor client-side
+    ├── mapper.service.ts          ← AdGuard event → DnsEventInput; skips unknown IPs
+    ├── cursor.service.ts          ← SystemState key='collector_cursor' read/write
+    └── writer.service.ts          ← geo-enriches batch then createMany(skipDuplicates)
 ```
 
 ### 6.2 Polling Loop
 
 ```
-┌─ start ────────────────────────────────────────────────────────┐
-│  1. load cursor (last processed timestamp)                     │
-│  2. GET /control/querylog?older_than=cursor                    │
-│  3. filter: keep only known device IPs                         │
-│  4. map AdGuard events → DnsEvent shapes                       │
-│  5. for each unique responseIp in batch:                       │
+┌─ onModuleInit ─────────────────────────────────────────────────┐
+│  1. load cursor from SystemState (default: now() - 24h)        │
+│  2. GET /control/querylog?limit=1000 from AdGuard              │
+│     → filter client-side: keep events where time > cursor      │
+│  3. if empty → log "no new events", return (cursor unchanged)  │
+│  4. load Device rows; build ip → deviceId map                  │
+│  5. map AdGuard events → DnsEventInput (drop unknown IPs)      │
+│  6. for each unique responseIp in batch:                        │
 │       a. check IpGeoCache — if hit and age < 30d → use cache  │
 │       b. if miss → read GeoLite2 .mmdb files (offline, fast)  │
 │       c. upsert IpGeoCache row                                 │
-│  6. deduplicate DnsEvent rows against existing rows            │
-│  7. bulk insert DnsEvent rows                                  │
-│  8. run anomaly rules on new batch                             │
-│  9. insert Alert rows for triggered rules                      │
-│  10. advance cursor to newest event timestamp                  │
-│  11. wait 30s                                                  │
-│  12. repeat                                                    │
+│  7. prisma.dnsEvent.createMany({ skipDuplicates: true })       │
+│  8. advance cursor to max(event.time) in batch                 │
+│  9. wait COLLECTOR_POLL_INTERVAL_MS (default 30s)              │
+│  10. repeat                                                     │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-**Cursor strategy:** The cursor is the `queriedAt` timestamp of the most recently processed event. It is kept in memory and flushed to a `collector_state` key in a small `SystemState` table (to be added via migration) so the cursor survives restarts. On first run the cursor defaults to `now() - 24h` to backfill one day.
+**Cursor strategy:** `CursorService` persists the newest processed `queriedAt` to `SystemState.key = 'collector_cursor'`. Survives restarts. On first run defaults to `now() - COLLECTOR_BACKFILL_HOURS`.
+
+**Note on Docker Desktop (macOS):** When AdGuard runs in Docker on macOS, the client IP for queries originating from the host machine appears as a Docker NAT address (e.g. `185.199.108.153`) rather than the host's LAN IP. This is a Docker Desktop networking artifact. Devices on the LAN connecting to AdGuard via its DNS port appear with their real IPs.
 
 ### 6.3 Anomaly Detection Rules
 
@@ -501,47 +504,94 @@ Example seed entries:
 
 **Collector**
 - [x] Install `maxmind` npm package in `apps/api`
-- [x] Build `collector/geo/` module (lookup + cache)
-- [x] Build `collector/poll.ts` (AdGuard API fetch)
-- [x] Build `collector/mapper.ts` (AdGuard event → DnsEvent shape)
-- [x] Build `collector/cursor.ts` (SystemState read/write)
-- [x] Build `collector/writer.ts` (bulk insert with geo enrichment)
+- [x] Build `GeoModule` (LookupService, CacheService, UpdaterService)
+- [x] Build `PollService` (AdGuard API fetch, client-side time filter)
+- [x] Build `MapperService` (AdGuard event → DnsEventInput)
+- [x] Build `CursorService` (SystemState read/write)
+- [x] Build `WriterService` (geo enrichment + bulk insert with skipDuplicates)
+- [x] Build `CollectorService` — orchestrates polling loop via `onModuleInit` + `SchedulerRegistry`
 - [ ] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
-- [x] `CollectorService` orchestrates the polling loop (`onModuleInit` + `SchedulerRegistry`)
-- [ ] Add `pnpm run collector:dev` script
 
 **Devices & Grafana**
-- [ ] Update seed with real device IPs (MacBook, iPhone, iPad)
-- [ ] Add Grafana provisioning: `datasources/postgres.yaml`
-- [ ] Add Grafana provisioning: `dashboards/overview.json`
-- [ ] Add Grafana provisioning: `dashboards/device.json`
-- [ ] Add Grafana provisioning: `dashboards/geomap.json` (world map)
+- [ ] Update seed script with real device IPs (MacBook, iPhone, iPad)
+- [x] Add Grafana provisioning: `datasources/postgres.yaml`
+- [x] Add Grafana provisioning: `dashboards/overview.json`
+- [x] Add Grafana provisioning: `dashboards/device.json`
+- [x] Add Grafana provisioning: `dashboards/geomap.json` (world map)
 
 **Deliverable:** Grafana dashboard showing live DNS traffic from registered personal devices, with per-device timelines, top domains with country/ISP, a world map of destination IPs, and basic alerting.
 
-### Phase 2 — Threat Intelligence (future)
+### Phase 2 — Monitoring Coverage (next)
 
-- Integrate a threat feed (e.g., abuse.ch, Quad9 threat list) and cross-reference queried domains
-- Promote `THREAT_MATCH` alerts from AdGuard's blocklist to external feed matches
+DNS-only monitoring has structural blind spots: apps using DNS-over-HTTPS (DoH) bypass AdGuard entirely, WebRTC/UDP flows are never resolved via DNS, and cached results produce no query at all.
+
+**2a — Block DoH providers at AdGuard**
+- Block domains of major DoH providers (`dns.google`, `cloudflare-dns.com`, `mozilla.cloudflare-dns.com`, etc.) in AdGuard's custom filter rules
+- Forces Chromium/Electron apps (Discord, Chrome, VS Code) to fall back to plain DNS through AdGuard
+- Zero infrastructure change — AdGuard configuration only
+
+**2b — TLS SNI extraction**
+- New service reads TLS Client Hello packets from the network interface (`tcpdump`/`libpcap` or a Go sidecar)
+- Extracts the unencrypted SNI field — the target hostname — visible even when DoH is used
+- New table: `TlsConnection(srcIp, hostname, dstIp, dstPort, seenAt)`
+- Enriches with geo data via existing `IpGeoCache`
+- Covers HTTPS connections that produce no DNS query (already-cached, DoH-bypassed, hardcoded IPs)
+
+**2c — Anomaly rules**
+- `unknownDomain` — first time a device queries a domain within 30 days
+- `highFrequency` — >100 queries to same domain from same device in 5 min
+- `threatMatch` — domain appears in AdGuard blocked list
+
+**Limitation:** the MacBook is a DNS server, not a network gateway. SNI capture on the MacBook only sees its own traffic. Full network-wide SNI/flow capture requires Phase 5 (Pi gateway).
+
+### Phase 3 — Threat Intelligence (future)
+
+- Integrate external threat feed (e.g., abuse.ch, Quad9 threat list) and cross-reference queried domains
+- Promote `THREAT_MATCH` alerts from AdGuard blocklist to feed matches
 - Scheduled daily blocklist refresh
 
-### Phase 3 — REST API + Web UI (future)
+### Phase 4 — REST API + Web UI (future)
 
 - Hono or Fastify HTTP server in `apps/api`
 - Endpoints: list devices, list alerts, acknowledge/resolve alert, list DNS events with filters
 - `apps/web` React + Tanstack Query frontend consuming the API
 - Replace Grafana for alert management (keep Grafana for exploratory analysis)
 
-### Phase 4 — Router-Wide Coverage (future)
+### Phase 5 — Gateway + Full Network Coverage (future)
 
-- Move stack to a Raspberry Pi (always-on, low power)
-- Configure router DNS to point to Pi
-- Extend Device registration to track all house devices
-- Add per-owner grouping for household visibility
+- Move stack to a Raspberry Pi (always-on, low power) acting as the **network gateway** (not just DNS server)
+- All device traffic routes through the Pi → enables network-wide packet capture
+- Run **Zeek** or **Suricata** as a passive IDS/sensor for SNI extraction and flow metadata on all devices
+- New table: `NetworkFlow(srcIp, dstIp, dstPort, protocol, bytes, duration, startedAt)`
+- Join flows with DNS/SNI data in Grafana for a complete picture: what every device talked to, how much data, from where
+- Anomaly detection on flow volume, not just DNS frequency
+- Per-owner grouping for household visibility
 
 ---
 
-## 11. Key Risks and Mitigations
+## 11. Monitoring Visibility — What We See vs. What We Miss
+
+DNS-based monitoring captures domain lookups, not connections. Understanding the gaps is essential for interpreting the data.
+
+| Traffic type | Captured? | Why |
+|---|---|---|
+| Standard DNS (A, AAAA, CNAME, MX) | ✅ Yes | Hits AdGuard resolver |
+| First HTTPS connection to a domain | ✅ Yes (via DNS) | DNS lookup happens before TLS |
+| Repeated connections within DNS TTL | ⚠️ Partial | Cached result — no query to AdGuard |
+| DNS-over-HTTPS (DoH) traffic | ❌ No | Bypasses system resolver entirely |
+| DNS-over-TLS (DoT) traffic | ❌ No | Same as DoH |
+| WebRTC / UDP voice/video (Discord) | ❌ No | No DNS lookup at connection time |
+| Hardcoded IPs (some CDNs, P2P) | ❌ No | No domain, no lookup |
+| QUIC / HTTP3 connections | ⚠️ Partial | DNS lookup captured, but flow invisible |
+
+**What Phase 2 adds:**
+- Blocking DoH providers in AdGuard forces most apps back to plain DNS → surfaces Discord, Chrome, Electron apps
+- TLS SNI extraction reveals hostnames for connections with no DNS query
+
+**What requires Phase 5 (Pi gateway):**
+- WebRTC flows, raw UDP traffic, byte-level volume data for all network devices
+
+## 12. Key Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
@@ -557,7 +607,7 @@ Example seed entries:
 
 ---
 
-## 12. Local URLs (after full stack is running)
+## 13. Local URLs (after full stack is running)
 
 | Service | URL |
 |---|---|
