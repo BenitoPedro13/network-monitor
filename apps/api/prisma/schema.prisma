@@ -67,6 +67,27 @@ model SystemState {
   updatedAt DateTime @updatedAt
 }
 
+model NetworkFlow {
+  id          String   @id @default(cuid())
+  uid         String?  @unique
+  srcIp       String
+  dstIp       String
+  dstPort     Int
+  protocol    String
+  service     String?
+  serverName  String?
+  bytes       BigInt
+  duration    Float?
+  connState   String?
+  startedAt   DateTime
+  deviceId    String?
+  hadDnsQuery Boolean?
+  createdAt   DateTime @default(now())
+
+  @@index([deviceId, startedAt])
+  @@index([dstIp, startedAt])
+}
+
 model Alert {
   id          String      @id @default(cuid())
   type        AlertType

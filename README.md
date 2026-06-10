@@ -53,6 +53,27 @@ Files (`GeoLite2-City.mmdb` ~60MB, `GeoLite2-ASN.mmdb` ~8MB) are saved to `./geo
 dig google.com @127.0.0.1
 ```
 
+## Flow Sensor (Zeek)
+
+A passive Zeek sensor on `en0` records connection metadata (the `NetworkFlow` table): WebRTC/UDP media, DoH-by-IP, TLS SNI hostnames, and connections with no DNS provenance. Passive capture changes no routing — safe to leave on.
+
+```bash
+brew install zeek                      # one-time install
+sudo scripts/zeek-sensor.sh start      # capture on en0 (set ZEEK_IFACE to override)
+scripts/zeek-sensor.sh status          # pid + log line counts
+sudo scripts/zeek-sensor.sh stop
+```
+
+Zeek writes JSON `conn.log`/`ssl.log` to `zeek/logs/` (gitignored); the API's `flow/` module tails them every `FLOW_POLL_INTERVAL_MS` (default 30s) and ingests internet-egress flows. The collector keeps working if the sensor is off — it just logs a warning at startup.
+
+For local development, use one lifecycle command:
+
+```bash
+pnpm run dev:flow
+```
+
+That starts Zeek with `sudo`, runs the API dev server as your normal user, and stops Zeek on exit/Ctrl-C.
+
 ## Useful Commands
 
 ```bash
@@ -62,16 +83,20 @@ pnpm run infra:down           # stop all containers
 pnpm run infra:logs           # tail container logs
 pnpm run db:migrate           # run Prisma migrations
 pnpm run db:seed              # seed Device table with registered devices
+pnpm run dev                  # start API collector only
+pnpm run dev:flow             # start Zeek sensor + API collector together
 pnpm run typecheck            # typecheck all workspaces
 pnpm run geoip:update         # download/update MaxMind GeoLite2 .mmdb databases
 pnpm run test:infra           # smoke test — checks all services are healthy
-pnpm run test                 # unit tests for collector modules
+pnpm run test                 # unit tests for collector + flow modules
+scripts/zeek-sensor.sh status          # passive flow sensor status
+sudo scripts/zeek-sensor.sh start|stop # passive flow sensor control (Zeek on en0)
 ```
 
 ## Roadmap
 
-Phase 1 (DNS pipeline) and Phase 2a (DoH blocking) are complete. Planned next — see `docs/tasks/` and `ARCHITECTURE.md`:
+Phase 1 (DNS pipeline), Phase 2a (DoH blocking), and Phase 2b flow capture for the Mac (Task 19, see above) are complete. Planned next — see `docs/tasks/` and `ARCHITECTURE.md`:
 
-- **Flow capture (Phase 2b, Tasks 19–20):** a passive **Zeek** sensor on `en0` records connection metadata (`NetworkFlow` table) — WebRTC/UDP media, DoH-by-IP, TLS SNI hostnames, and "connections with no DNS provenance" — the things DNS structurally can't see. Passive and always-on-safe for this Mac (no routing change). Adds a Zeek install + `scripts/zeek-sensor.sh`.
+- **Detection + dashboards (Task 20):** the `NO_DNS_CONNECTION` anomaly rule and a Grafana flow dashboard on top of the `NetworkFlow` data.
 - **Gateway investigation mode (Task 21):** optionally route another device (the phone) *through* the Mac so the same sensor sees its traffic. On-demand only — the routed device depends on the Mac while enabled.
 - **Phase 5:** move the stack to an always-on Raspberry Pi gateway for network-wide capture without the per-device routing tradeoff.

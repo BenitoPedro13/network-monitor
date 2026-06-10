@@ -2,7 +2,7 @@
 
 **Phase:** 2 — Monitoring Coverage (flow layer)  
 **Group:** Sensor + Collector  
-**Status:** Pending  
+**Status:** Done  
 **Date:** 2026-06-10
 
 ---
@@ -58,7 +58,7 @@ model NetworkFlow {
 }
 ```
 
-`SystemState` gains a second cursor key `flow_cursor` (byte offset into conn.log) — reuses the existing key/value table.
+`SystemState` gains a second cursor key `flow_cursor` — reuses the existing key/value table. **Decision (implementation):** the value is JSON `{"conn": N, "ssl": M}` since both logs need independent byte offsets. The cursor is committed *after* a successful write (at-least-once); `uid @unique` + `skipDuplicates` makes re-ingest idempotent.
 
 ### Ingest — new NestJS `flow/` module (mirrors `collector/`)
 
@@ -96,10 +96,23 @@ apps/api/src/flow/
 | `apps/api/src/app.module.ts` | Import `FlowModule` |
 | `apps/api/tests/flow-mapper.test.ts` | Mapper filtering + enrichment unit tests |
 | `scripts/zeek-sensor.sh` | New — start/stop/status |
+| `scripts/dev-with-zeek.sh` | New — starts Zeek + API together and stops Zeek on API exit |
 | `zeek/local.zeek` | New — Zeek site config (JSON, no rotation, conn+ssl only) |
-| `.gitignore` | Add `zeek/logs/` |
+| `package.json` | Add `pnpm run dev:flow` lifecycle command |
+| `.env.example` | Add `FLOW_POLL_INTERVAL_MS` (default 30000) |
 | `README.md` | Zeek install + sensor command |
-| `ARCHITECTURE.md` | §4.5 NetworkFlow, §6 flow component, retire standalone 2b |
+| `ARCHITECTURE.md` | §4.5 NetworkFlow, §6 flow component, retire standalone 2b (done in prior session) |
+
+`.gitignore` needed no change — the existing `logs/` and `*.log` rules already cover `zeek/logs/`.
+
+## Implementation notes (decisions made during build)
+
+- **ssl↔conn ordering:** `ssl.log` lands at handshake time, `conn.log` at connection end, so SNI usually arrives *before* its flow. The writer keeps an in-memory `pendingSni` map (uid → server_name, capped at 10k) and attaches it when the conn record arrives; the reverse order (conn first) is covered by a per-uid `updateMany`. Pending entries are lost on app restart — acceptable; those flows just have `serverName = null`.
+- **`hadDnsQuery` window:** a DnsEvent with matching `(deviceId, responseIp)` whose `queriedAt` is within 60 min before the flow start (+60 s forward skew for log-timing jitter).
+- **Noise filter:** `conn_state = S0` with 0 bytes is dropped; S0 with payload is kept.
+- **`zeek/local.zeek`** sets `redef ignore_checksums = T` — macOS NIC checksum offloading makes the host's own outgoing packets look corrupt to Zeek, which would otherwise discard exactly the traffic we want.
+- **Sensor absence is not an error:** if `conn.log` doesn't exist, the flow module logs one startup warning and polls quietly; the DNS collector is unaffected.
+- **Single dev lifecycle:** `pnpm run dev:flow` starts Zeek with `sudo`, runs the API dev server as the normal user, and stops Zeek on exit/Ctrl-C.
 
 ---
 
@@ -115,6 +128,8 @@ docker exec network_monitor_postgres psql -U network_monitor -d network_monitor 
    WHERE "startedAt" > now() - interval '"'"'10 min'"'"' GROUP BY 1,2,3,4 ORDER BY 5 DESC LIMIT 20;'
 # expect: UDP media flows (Discord), TLS flows with serverName, some hadDnsQuery=false rows
 ```
+
+**Verified (2026-06-10):** `pnpm run test` 28/28 green, `pnpm run typecheck` clean, app boots with FlowModule, Zeek is installed, and `zeek/local.zeek` parses cleanly with `zeek --parse-only`. Hand-written `conn.log`/`ssl.log` lines were ingested end-to-end into Postgres: DNS-matched flow got `hadDnsQuery=true`, unmatched got `false` plus its SNI from ssl.log, unknown source kept with `deviceId=NULL`, internal destination dropped. Live Zeek run on `en0` produced growing `conn.log`/`ssl.log` files and Postgres `NetworkFlow` rows with TLS SNI including `chatgpt.com`, `discord.com`, `cdn.discordapp.com`, `api2.cursor.sh`, and `dns10.quad9.net`; known-device rows had `hadDnsQuery=false` where no recent DNS match existed.
 
 ---
 

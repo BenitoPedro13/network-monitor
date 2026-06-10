@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { GeoModule } from './geo/geo.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { CollectorModule } from './collector/collector.module';
+import { FlowModule } from './flow/flow.module';
 
 const envFilePath = resolve(process.env['INIT_CWD'] ?? process.cwd(), '.env');
 
@@ -15,6 +16,7 @@ const envFilePath = resolve(process.env['INIT_CWD'] ?? process.cwd(), '.env');
     PrismaModule,
     GeoModule,
     CollectorModule,
+    FlowModule,
   ],
 })
 export class AppModule {}

@@ -13,6 +13,7 @@
     "db:migrate": "pnpm --filter @network-monitor/api run db:migrate",
     "db:seed": "pnpm --filter @network-monitor/api run db:seed",
     "dev": "pnpm --filter @network-monitor/api run dev",
+    "dev:flow": "bash ./scripts/dev-with-zeek.sh",
     "test": "pnpm --filter @network-monitor/api run test",
     "test:infra": "bash ./scripts/test-infra.sh",
     "geoip:update": "bash ./scripts/update-geoip.sh",
