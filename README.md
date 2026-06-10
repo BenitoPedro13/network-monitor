@@ -72,7 +72,7 @@ For local development, use one lifecycle command:
 pnpm run dev:flow
 ```
 
-That starts Zeek with `sudo`, runs the API dev server as your normal user, and stops Zeek on exit/Ctrl-C.
+That starts Zeek with `sudo`, starts native AdGuard Home if it is not already running, runs the API dev server as your normal user, and stops Zeek plus AdGuard Home on exit/Ctrl-C so port `3000` is free for other local apps.
 
 ## Useful Commands
 
@@ -83,8 +83,8 @@ pnpm run infra:down           # stop all containers
 pnpm run infra:logs           # tail container logs
 pnpm run db:migrate           # run Prisma migrations
 pnpm run db:seed              # seed Device table with registered devices
-pnpm run dev                  # start API collector only
-pnpm run dev:flow             # start Zeek sensor + API collector together
+pnpm run dev                  # start AdGuard if needed + API collector
+pnpm run dev:flow             # start Zeek sensor + AdGuard if needed + API collector
 pnpm run typecheck            # typecheck all workspaces
 pnpm run geoip:update         # download/update MaxMind GeoLite2 .mmdb databases
 pnpm run test:infra           # smoke test — checks all services are healthy

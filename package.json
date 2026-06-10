@@ -12,7 +12,7 @@
     "infra:logs": "docker compose logs -f --tail=100",
     "db:migrate": "pnpm --filter @network-monitor/api run db:migrate",
     "db:seed": "pnpm --filter @network-monitor/api run db:seed",
-    "dev": "pnpm --filter @network-monitor/api run dev",
+    "dev": "bash ./scripts/dev-with-adguard.sh",
     "dev:flow": "bash ./scripts/dev-with-zeek.sh",
     "test": "pnpm --filter @network-monitor/api run test",
     "test:infra": "bash ./scripts/test-infra.sh",
