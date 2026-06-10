@@ -2,21 +2,33 @@
   "name": "@network-monitor/api",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start:prod": "node dist/main",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "tsx scripts/seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test tests/**/*.test.ts"
   },
-  "devDependencies": {
-    "@types/node": "^22.15.18",
-    "prisma": "^6.19.3"
-  },
   "dependencies": {
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/schedule": "^5.0.1",
     "@prisma/client": "^6.19.3",
-    "maxmind": "^5.0.6"
+    "maxmind": "^5.0.6",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@types/node": "^22.15.18",
+    "prisma": "^6.19.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

@@ -97,6 +97,10 @@ nest g module prisma
 nest g service prisma
 ```
 
+**Do NOT use `tsx` to run the NestJS app** — esbuild (used by tsx) does not support `emitDecoratorMetadata`, which breaks NestJS constructor injection silently. Always use `nest start --watch` for dev and `node dist/main` for prod.
+
+After every `nest g` command: **delete the generated `.spec.ts` file** — we use `tests/*.test.ts` with Node.js built-in test runner, not Jest. The `.spec.ts` files cause type errors and are excluded from tsconfig.
+
 NestJS conventions:
 - Every domain area is a **module** (`@Module`)
 - Business logic lives in **services** (`@Injectable`)
@@ -126,7 +130,7 @@ Never hardcode credentials. Never commit `.env`.
 Key vars:
 - `DATABASE_URL` — Prisma connection string
 - `ADGUARD_URL`, `ADGUARD_USER`, `ADGUARD_PASSWORD` — collector auth
-- `GEOIP_CITY_DB_PATH`, `GEOIP_ASN_DB_PATH` — paths to MaxMind `.mmdb` files
+- `GEO_UPDATE_INTERVAL_DAYS` — how often to refresh MaxMind databases (default 7). Paths are resolved automatically via `INIT_CWD` — no path env vars needed.
 - `COLLECTOR_POLL_INTERVAL_MS` — polling cadence (default 30000)
 - `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD` — Grafana access
 
