@@ -70,7 +70,7 @@ CLAUDE.md          ← this file
 ## Key Commands
 
 ```bash
-pnpm run infra:up           # start Postgres + AdGuard + Grafana
+pnpm run infra:up           # start containers (Postgres + Grafana); AdGuard Home runs as a native launchd service
 pnpm run infra:up:postgres  # start Postgres only
 pnpm run infra:down         # stop all containers
 pnpm run infra:logs         # tail container logs

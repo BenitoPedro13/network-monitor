@@ -32,16 +32,16 @@ fi
 printf "[infra] Checking AdGuard Home...  "
 status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${ADGUARD_WEB_PORT}/control/status" 2>/dev/null || echo "000")
 # 200 = wizard done and authenticated
-# 302/303 = wizard not done yet (redirect to /install.html) — container is up
-# 401/403 = wizard done but unauthenticated — container is up
+# 302/303 = wizard not done yet (redirect to /install.html) — service is up
+# 401/403 = wizard done but unauthenticated — service is up
 if [ "$status" = "200" ] || [ "$status" = "302" ] || [ "$status" = "303" ] || [ "$status" = "401" ] || [ "$status" = "403" ]; then
   printf "$PASS\n"
-  if [ "$status" != "200" ]; then
+  if [ "$status" = "302" ] || [ "$status" = "303" ]; then
     echo "        Note: AdGuard wizard not completed yet — visit http://localhost:${ADGUARD_WEB_PORT} to set it up"
   fi
 else
   printf "$FAIL\n"
-  echo "        Hint: container may be starting up, try again in a few seconds (got HTTP $status)"
+  echo "        Hint: AdGuard runs as a native service — check 'pgrep AdGuardHome' and /var/log/AdGuardHome.stderr.log (got HTTP $status)"
   ok=false
 fi
 

@@ -8,7 +8,7 @@ Home network DNS monitoring tool. Captures DNS queries from personal devices via
 
 | Service | URL | Purpose |
 |---|---|---|
-| AdGuard Home | http://localhost:3000 | DNS sinkhole + query logger |
+| AdGuard Home | http://localhost:3000 | DNS sinkhole + query logger (native launchd service, not Docker) |
 | Grafana | http://localhost:3001 | Dashboards and visualization |
 | PostgreSQL | localhost:5433 | Data store |
 
@@ -28,13 +28,13 @@ pnpm run bootstrap
 
 This automatically: installs dependencies, starts Postgres, generates Prisma Client, applies migrations, runs seed, downloads the GeoLite2 databases (if `MAXMIND_LICENSE_KEY` is set), and typechecks. At the end it prints the checklist of manual host-level steps (DNS setting, Docker host-networking toggle).
 
-To also start AdGuard Home and Grafana:
+To also start Grafana and set up the native AdGuard Home service:
 
 ```bash
 pnpm run bootstrap:full
 ```
 
-3. AdGuard runs with host networking and binds ports 53 (DNS) and 3000 (web UI) directly on the host. On macOS, enable **Docker Desktop → Settings → Resources → Network → Enable host networking** first (one-time). Its config is rendered automatically from `adguardhome/AdGuardHome.template.yaml` using your `.env` credentials — no setup wizard. (The wizard only appears if you start AdGuard without `ADGUARD_USER`/`ADGUARD_PASSWORD` set.)
+3. AdGuard Home runs as a **native macOS service** (launchd daemon), not in Docker — Docker Desktop's network relays destroy client source IPs, which breaks per-device attribution (see `docs/tasks/13-unknown-ip-visibility.md` and `15-adguard-host-networking.md`). Its config is rendered automatically from `adguardhome/AdGuardHome.template.yaml` using your `.env` credentials — no setup wizard. Bootstrap downloads the binary and prints the one-line `sudo` install command (binary + config are copied to `/Applications/AdGuardHome/` — macOS TCC blocks launchd daemons from reading `~/Documents`).
 
 4. Download MaxMind GeoLite2 databases (free, requires registration):
    - Register at maxmind.com → Account → Manage License Keys → Create new key
@@ -56,7 +56,7 @@ dig google.com @127.0.0.1
 ## Useful Commands
 
 ```bash
-pnpm run infra:up             # start all services (Postgres + AdGuard + Grafana)
+pnpm run infra:up             # start containers (Postgres + Grafana); AdGuard runs natively
 pnpm run infra:up:postgres    # start Postgres only
 pnpm run infra:down           # stop all containers
 pnpm run infra:logs           # tail container logs

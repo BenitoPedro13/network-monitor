@@ -21,6 +21,7 @@ coverage/
 .turbo/
 
 # Runtime data
+bin/
 tmp/
 data/
 adguardhome/work/

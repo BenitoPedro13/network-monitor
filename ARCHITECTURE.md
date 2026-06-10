@@ -27,10 +27,10 @@ DNS was chosen as the capture layer because:
 │   MacBook  │  iPhone  │  iPad  │  (others as needed)           │
 │            DNS manually set to host machine IP                  │
 └────────────────────────┬────────────────────────────────────────┘
-                         │ DNS queries (UDP/TCP port 53, host networking)
+                         │ DNS queries (UDP/TCP port 53)
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  AdGuard Home  (Docker)                         │
+│           AdGuard Home  (native macOS launchd service)          │
 │  - Resolves DNS upstream (1.1.1.1 / 9.9.9.9)                  │
 │  - Logs every query: domain, source IP, timestamp,             │
 │    response IP, blocked status                                  │
@@ -293,7 +293,7 @@ apps/api/src/
 
 **Cursor strategy:** `CursorService` persists the newest processed `queriedAt` to `SystemState.key = 'collector_cursor'`. Survives restarts. On first run defaults to `now() - COLLECTOR_BACKFILL_HOURS`.
 
-**Note on Docker Desktop (macOS):** With Docker port-forwarding, the client IP AdGuard reports is an unstable echo of the container's own outbound flows (e.g. its DoH upstream's address) — meaningless for device mapping and rotating on every Docker restart (root cause in `docs/tasks/13-unknown-ip-visibility.md`). The AdGuard container therefore runs with **`network_mode: host`** (requires Docker Desktop ≥ 4.34 with *Settings → Resources → Network → Enable host networking*). Host-originated queries then arrive as loopback (`::1` / `127.0.0.1`), which is stable and registered as a Device row. How LAN devices appear through the host-networking relay must be verified with a real device before registering them.
+**Note on Docker Desktop (macOS):** AdGuard cannot run in Docker on macOS — both networking modes destroy client source IPs, which breaks per-device attribution. Port-forwarding stamps queries with an unstable echo of the container's own outbound flows (e.g. its DoH upstream's address, rotating on every Docker restart); host networking is a userspace relay that collapses every client — Mac and LAN devices alike — to `::1` (root cause analysis in `docs/tasks/13-unknown-ip-visibility.md` and `15-adguard-host-networking.md`). AdGuard therefore runs as a **native launchd daemon** installed in `/Applications/AdGuardHome/` (macOS TCC blocks daemons from reading `~/Documents`, so binary + config are copied out of the repo; see `docs/tasks/17-native-adguard.md`). Natively it sees real sources: the Mac's own queries arrive as `127.0.0.1`, LAN devices with their true IPs (verified: Android phone → `192.168.1.21`). Postgres and Grafana remain in Docker.
 
 ### 6.3 Anomaly Detection Rules
 

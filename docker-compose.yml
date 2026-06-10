@@ -17,18 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  adguardhome:
-    image: adguard/adguardhome:latest
-    container_name: network_monitor_adguardhome
-    restart: unless-stopped
-    # host networking (requires Docker Desktop "Enable host networking") so
-    # AdGuard sees stable client source IPs instead of NAT-rewritten ones;
-    # binds host ports 53 (DNS) and 3000 (web UI) directly
-    network_mode: host
-    volumes:
-      - ./adguardhome/work:/opt/adguardhome/work
-      - ./adguardhome/conf:/opt/adguardhome/conf
-
   grafana:
     image: grafana/grafana:latest
     container_name: network_monitor_grafana
