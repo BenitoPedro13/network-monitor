@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReaderService, zeekLogDir } from './reader.service';
 import { MapperService } from './mapper.service';
 import { WriterService } from './writer.service';
+import { FlowAnomalyService } from './anomaly.service';
 
 @Injectable()
 export class FlowService implements OnModuleInit {
@@ -19,6 +20,7 @@ export class FlowService implements OnModuleInit {
     private readonly reader: ReaderService,
     private readonly mapper: MapperService,
     private readonly writer: WriterService,
+    private readonly anomaly: FlowAnomalyService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -49,6 +51,7 @@ export class FlowService implements OnModuleInit {
         .filter((f): f is NonNullable<typeof f> => f !== null);
 
       await this.writer.write(flows, batch.ssl);
+      await this.anomaly.runRules(flows);
       await this.reader.setCursor(batch.next);
     } catch (err) {
       this.logger.error(

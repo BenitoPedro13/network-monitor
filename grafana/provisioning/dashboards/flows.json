@@ -1,6 +1,6 @@
 {
   "annotations": { "list": [] },
-  "description": "DNS traffic overview across all registered devices",
+  "description": "Network flow visibility from Zeek: destination IPs, TLS SNI, bytes, ports, and DNS provenance",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -9,9 +9,9 @@
     {
       "icon": "external link",
       "keepTime": true,
-      "title": "Per-Device →",
+      "title": "← Overview",
       "type": "link",
-      "url": "/d/network-monitor-device"
+      "url": "/d/network-monitor-overview"
     },
     {
       "icon": "external link",
@@ -19,13 +19,6 @@
       "title": "World Map →",
       "type": "link",
       "url": "/d/network-monitor-geomap"
-    },
-    {
-      "icon": "external link",
-      "keepTime": true,
-      "title": "Flows →",
-      "type": "link",
-      "url": "/d/network-monitor-flows"
     }
   ],
   "panels": [
@@ -39,7 +32,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
       "id": 1,
       "options": {
         "colorMode": "background",
@@ -49,13 +42,13 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "Total Queries",
+      "title": "Flows",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT COUNT(*) as value FROM \"DnsEvent\" WHERE $__timeFilter(\"queriedAt\")",
+          "rawSql": "SELECT count(*) AS value FROM \"NetworkFlow\" WHERE $__timeFilter(\"startedAt\")",
           "refId": "A"
         }
       ]
@@ -70,7 +63,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
       "id": 2,
       "options": {
         "colorMode": "background",
@@ -80,44 +73,13 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "Blocked Queries",
+      "title": "No DNS Trail",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT COUNT(*) as value FROM \"DnsEvent\" WHERE $__timeFilter(\"queriedAt\") AND blocked = true",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "postgres-main" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "purple", "mode": "fixed" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
-      "id": 3,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "title": "Unique Domains",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "postgres-main" },
-          "format": "table",
-          "rawSql": "SELECT COUNT(DISTINCT \"queriedHost\") as value FROM \"DnsEvent\" WHERE $__timeFilter(\"queriedAt\")",
+          "rawSql": "SELECT count(*) AS value FROM \"NetworkFlow\" WHERE $__timeFilter(\"startedAt\") AND \"hadDnsQuery\" = false",
           "refId": "A"
         }
       ]
@@ -132,7 +94,38 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 0 },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Flows With SNI",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM \"NetworkFlow\" WHERE $__timeFilter(\"startedAt\") AND \"serverName\" IS NOT NULL",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "id": 4,
       "options": {
         "colorMode": "background",
@@ -142,13 +135,13 @@
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
-      "title": "Active Devices",
+      "title": "UDP Flows",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT COUNT(DISTINCT \"deviceId\") as value FROM \"DnsEvent\" WHERE $__timeFilter(\"queriedAt\")",
+          "rawSql": "SELECT count(*) AS value FROM \"NetworkFlow\" WHERE $__timeFilter(\"startedAt\") AND protocol = 'udp'",
           "refId": "A"
         }
       ]
@@ -166,7 +159,7 @@
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 15,
             "gradientMode": "none",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "insertNulls": false,
@@ -191,13 +184,13 @@
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "title": "Queries Over Time (by Device)",
+      "title": "Flows Over Time (by Device)",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "time_series",
-          "rawSql": "SELECT\n  $__timeGroupAlias(e.\"queriedAt\", $__interval),\n  d.name as metric,\n  count(*) as value\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\")\nGROUP BY 1, 2\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroupAlias(f.\"startedAt\", $__interval),\n  COALESCE(d.name, f.\"srcIp\") AS metric,\n  count(*) AS value\nFROM \"NetworkFlow\" f\nLEFT JOIN \"Device\" d ON f.\"deviceId\" = d.id\nWHERE $__timeFilter(f.\"startedAt\")\nGROUP BY 1, 2\nORDER BY 1",
           "refId": "A"
         }
       ]
@@ -212,26 +205,33 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Queries" },
-            "properties": [{ "id": "custom.width", "value": 90 }]
+            "matcher": { "id": "byName", "options": "Bytes" },
+            "properties": [
+              { "id": "unit", "value": "bytes" },
+              { "id": "custom.width", "value": 110 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Flows" },
+            "properties": [{ "id": "custom.width", "value": 80 }]
           }
         ]
       },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 12 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
       "id": 6,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Queries" }]
+        "sortBy": [{ "desc": true, "displayName": "Bytes" }]
       },
-      "title": "Top Queried Domains",
+      "title": "Top Destination IPs by Bytes",
       "type": "table",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT\n  \"queriedHost\" as \"Domain\",\n  count(*) as \"Queries\"\nFROM \"DnsEvent\"\nWHERE $__timeFilter(\"queriedAt\")\nGROUP BY \"queriedHost\"\nORDER BY \"Queries\" DESC\nLIMIT 20",
+          "rawSql": "SELECT\n  COALESCE(d.name, f.\"srcIp\") AS \"Device\",\n  f.\"dstIp\" AS \"Destination IP\",\n  COALESCE(f.\"serverName\", '<no SNI>') AS \"SNI\",\n  COALESCE(g.country, 'Unknown') AS \"Country\",\n  COALESCE(g.isp, 'Unknown') AS \"ISP\",\n  f.\"dstPort\" AS \"Port\",\n  f.protocol AS \"Protocol\",\n  sum(f.bytes)::bigint AS \"Bytes\",\n  count(*) AS \"Flows\",\n  max(f.\"startedAt\") AS \"Last Seen\"\nFROM \"NetworkFlow\" f\nLEFT JOIN \"Device\" d ON f.\"deviceId\" = d.id\nLEFT JOIN \"IpGeoCache\" g ON f.\"dstIp\" = g.ip\nWHERE $__timeFilter(f.\"startedAt\")\nGROUP BY 1,2,3,4,5,6,7\nORDER BY \"Bytes\" DESC\nLIMIT 50",
           "refId": "A"
         }
       ]
@@ -246,57 +246,29 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Queries" },
-            "properties": [{ "id": "custom.width", "value": 90 }]
+            "matcher": { "id": "byName", "options": "Flows" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }, { "color": "orange", "value": 5 }, { "color": "red", "value": 20 }] } }
+            ]
           }
         ]
       },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 12 },
+      "gridPos": { "h": 10, "w": 14, "x": 0, "y": 22 },
       "id": 7,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Queries" }]
+        "sortBy": [{ "desc": true, "displayName": "Flows" }]
       },
-      "title": "Top DNS Destination IPs",
+      "title": "Connections With No DNS Trail",
       "type": "table",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT\n  e.\"responseIp\" as \"IP\",\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  count(*) as \"Queries\",\n  max(e.\"queriedAt\") as \"Last Seen\"\nFROM \"DnsEvent\" e\nLEFT JOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\n  AND e.\"responseIp\" IS NOT NULL\nGROUP BY e.\"responseIp\", g.country, g.isp\nORDER BY \"Queries\" DESC\nLIMIT 20",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "postgres-main" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "orange", "mode": "fixed" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
-      "id": 8,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "title": "Open Alerts",
-      "type": "stat",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "postgres-main" },
-          "format": "table",
-          "rawSql": "SELECT COUNT(*) as value FROM \"Alert\" WHERE status = 'OPEN'",
+          "rawSql": "SELECT\n  COALESCE(d.name, f.\"srcIp\") AS \"Device\",\n  f.\"dstIp\" AS \"Destination IP\",\n  COALESCE(f.\"serverName\", '<no SNI>') AS \"SNI\",\n  COALESCE(g.country, 'Unknown') AS \"Country\",\n  COALESCE(g.isp, 'Unknown') AS \"ISP\",\n  f.\"dstPort\" AS \"Port\",\n  f.protocol AS \"Protocol\",\n  count(*) AS \"Flows\",\n  max(f.\"startedAt\") AS \"Last Seen\"\nFROM \"NetworkFlow\" f\nLEFT JOIN \"Device\" d ON f.\"deviceId\" = d.id\nLEFT JOIN \"IpGeoCache\" g ON f.\"dstIp\" = g.ip\nWHERE $__timeFilter(f.\"startedAt\") AND f.\"hadDnsQuery\" = false\nGROUP BY 1,2,3,4,5,6,7\nORDER BY \"Flows\" DESC\nLIMIT 50",
           "refId": "A"
         }
       ]
@@ -309,43 +281,52 @@
           "mappings": [],
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Risk" },
-            "properties": [
-              { "id": "custom.width", "value": 90 },
-              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    { "color": "blue", "value": null },
-                    { "color": "yellow", "value": 31 },
-                    { "color": "orange", "value": 61 },
-                    { "color": "red", "value": 81 }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
-      "id": 9,
+      "gridPos": { "h": 10, "w": 10, "x": 14, "y": 22 },
+      "id": 8,
       "options": {
         "cellHeight": "sm",
         "footer": { "show": false },
         "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Risk" }]
+        "sortBy": [{ "desc": true, "displayName": "Flows" }]
       },
-      "title": "Open Alerts",
+      "title": "Protocol / Port Breakdown",
       "type": "table",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT\n  a.\"createdAt\" as \"Created\",\n  d.name as \"Device\",\n  a.type as \"Type\",\n  a.title as \"Title\",\n  a.\"riskScore\" as \"Risk\"\nFROM \"Alert\" a\nJOIN \"Device\" d ON a.\"deviceId\" = d.id\nWHERE a.status = 'OPEN'\nORDER BY a.\"riskScore\" DESC, a.\"createdAt\" DESC\nLIMIT 100",
+          "rawSql": "SELECT\n  protocol AS \"Protocol\",\n  \"dstPort\" AS \"Port\",\n  count(*) AS \"Flows\",\n  sum(bytes)::bigint AS \"Bytes\"\nFROM \"NetworkFlow\"\nWHERE $__timeFilter(\"startedAt\")\nGROUP BY 1,2\nORDER BY \"Flows\" DESC\nLIMIT 25",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Flows" }]
+      },
+      "title": "TLS Destinations by SNI",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  f.\"serverName\" AS \"SNI\",\n  f.\"dstIp\" AS \"Destination IP\",\n  COALESCE(g.country, 'Unknown') AS \"Country\",\n  COALESCE(g.isp, 'Unknown') AS \"ISP\",\n  count(*) AS \"Flows\",\n  sum(f.bytes)::bigint AS \"Bytes\",\n  max(f.\"startedAt\") AS \"Last Seen\"\nFROM \"NetworkFlow\" f\nLEFT JOIN \"IpGeoCache\" g ON f.\"dstIp\" = g.ip\nWHERE $__timeFilter(f.\"startedAt\") AND f.\"serverName\" IS NOT NULL\nGROUP BY 1,2,3,4\nORDER BY \"Flows\" DESC\nLIMIT 60",
           "refId": "A"
         }
       ]
@@ -353,12 +334,12 @@
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "tags": ["network-monitor"],
+  "tags": ["network-monitor", "flows", "zeek"],
   "templating": { "list": [] },
   "time": { "from": "now-6h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Network Monitor — Overview",
-  "uid": "network-monitor-overview",
+  "title": "Network Monitor — Flows",
+  "uid": "network-monitor-flows",
   "version": 1
 }

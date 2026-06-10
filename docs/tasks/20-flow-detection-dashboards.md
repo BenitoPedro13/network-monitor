@@ -2,7 +2,7 @@
 
 **Phase:** 2 — Monitoring Coverage (flow layer)  
 **Group:** Anomaly + Grafana  
-**Status:** Pending  
+**Status:** In Progress  
 **Date:** 2026-06-10
 
 ---
@@ -41,19 +41,30 @@ Also add a `NO_DNS_CONNECTION` slice to the existing Open Alerts panels (no pane
 
 | File | Change |
 |---|---|
-| `apps/api/prisma/schema.prisma` | `NO_DNS_CONNECTION` enum value + migration |
-| `apps/api/src/flow/anomaly.service.ts` (or extend collector AnomalyService) | New rule |
+| `apps/api/prisma/schema.prisma` | `NO_DNS_CONNECTION` enum value |
+| `apps/api/src/flow/anomaly.service.ts` | New rule |
+| `apps/api/src/flow/flow.module.ts` | Register flow anomaly provider |
 | `apps/api/src/flow/flow.service.ts` | Call rule after write |
 | `grafana/provisioning/dashboards/flows.json` | New dashboard |
-| `grafana/provisioning/dashboards/overview.json` | Link to flows dashboard |
+| `grafana/provisioning/dashboards/overview.json` | Link to flows dashboard + show DNS destination IPs |
+| `grafana/provisioning/dashboards/geomap.json` | Show destination IPs in detail table + link to flows |
 | `apps/api/tests/flow-anomaly.test.ts` | Rule unit tests |
 | `ARCHITECTURE.md` | Document the rule + dashboard |
 
 ---
 
+## Implementation Notes
+
+- `FlowAnomalyService` runs after each successful flow write and groups known-device flows by `(deviceId, dstIp)` where `hadDnsQuery = false`.
+- The first threshold is 5 no-DNS flows to the same destination within 5 minutes; alerts are deduped by `(deviceId, title)` for 24 hours.
+- The new flow dashboard is intentionally IP-first: destination IP, SNI, country/ISP, bytes, port/protocol, and no-DNS provenance are all visible without opening SQL.
+- Prisma migration `20260610194344_add_no_dns_connection_alert` was created via `prisma migrate dev --name add_no_dns_connection_alert` and applied successfully.
+- Verified so far: Postgres enum includes `NO_DNS_CONNECTION`, dashboard JSON parses, Grafana registered `network-monitor-flows`, `pnpm run typecheck` is clean, and `pnpm run test` is 34/34 green.
+
 ## How to Verify
 
 ```bash
+pnpm --filter @network-monitor/api exec prisma migrate dev --name add_no_dns_connection_alert
 pnpm run typecheck && pnpm run test
 # with the sensor running and some hardcoded-IP traffic (e.g. a DoH client by IP):
 # Grafana → Flows dashboard shows the no-DNS-provenance table populated

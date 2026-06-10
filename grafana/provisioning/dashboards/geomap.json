@@ -12,6 +12,13 @@
       "title": "← Overview",
       "type": "link",
       "url": "/d/network-monitor-overview"
+    },
+    {
+      "icon": "external link",
+      "keepTime": true,
+      "title": "Flows →",
+      "type": "link",
+      "url": "/d/network-monitor-flows"
     }
   ],
   "panels": [
@@ -126,7 +133,7 @@
         {
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
-          "rawSql": "SELECT\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.city, '') as \"City\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  COALESCE(g.asn, '') as \"ASN\",\n  count(*) as \"Queries\",\n  max(e.\"queriedAt\") as \"Last Seen\"\nFROM \"DnsEvent\" e\nJOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\nGROUP BY g.country, g.city, g.isp, g.asn\nORDER BY \"Queries\" DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  e.\"responseIp\" as \"IP\",\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.city, '') as \"City\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  COALESCE(g.asn, '') as \"ASN\",\n  count(*) as \"Queries\",\n  max(e.\"queriedAt\") as \"Last Seen\"\nFROM \"DnsEvent\" e\nJOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\nGROUP BY e.\"responseIp\", g.country, g.city, g.isp, g.asn\nORDER BY \"Queries\" DESC\nLIMIT 80",
           "refId": "A"
         }
       ]

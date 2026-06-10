@@ -11,6 +11,7 @@ enum AlertType {
   UNKNOWN_DOMAIN
   HIGH_FREQUENCY
   THREAT_MATCH
+  NO_DNS_CONNECTION
 }
 
 enum AlertStatus {
