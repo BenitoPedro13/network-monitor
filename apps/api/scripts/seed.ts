@@ -2,48 +2,52 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const devices = [
+  {
+    name: "macbook-loopback",
+    ipAddress: "127.0.0.1",
+    owner: "benito",
+    deviceType: "laptop"
+  },
+  {
+    name: "macbook-loopback-v6",
+    ipAddress: "::1",
+    owner: "benito",
+    deviceType: "laptop"
+  },
+  {
+    name: "macbook-benito",
+    ipAddress: "192.168.1.6",
+    owner: "benito",
+    deviceType: "laptop"
+  },
+  {
+    name: "android-benito",
+    ipAddress: "192.168.1.21",
+    owner: "benito",
+    deviceType: "phone"
+  }
+];
+
 async function main(): Promise<void> {
-  const device = await prisma.device.upsert({
-    where: { ipAddress: "192.168.1.10" },
-    update: {
-      name: "mac-mini-monitor",
-      owner: "benito",
-      deviceType: "desktop"
-    },
-    create: {
-      name: "mac-mini-monitor",
-      ipAddress: "192.168.1.10",
-      owner: "benito",
-      deviceType: "desktop"
-    }
-  });
+  for (const device of devices) {
+    await prisma.device.upsert({
+      where: { ipAddress: device.ipAddress },
+      update: {
+        name: device.name,
+        owner: device.owner,
+        deviceType: device.deviceType
+      },
+      create: device
+    });
+  }
 
-  await prisma.dnsEvent.create({
-    data: {
-      queriedHost: "api.github.com",
-      queryType: "A",
-      sourceIp: device.ipAddress,
-      queriedAt: new Date(),
-      deviceId: device.id
-    }
-  });
-
-  await prisma.alert.create({
-    data: {
-      type: "UNKNOWN_DOMAIN",
-      title: "Novo dominio detectado",
-      description: "Dominio ainda nao mapeado no baseline",
-      riskScore: 40,
-      deviceId: device.id
-    }
-  });
-
-  console.log("[db:seed] Seed concluido com sucesso.");
+  console.log(`[db:seed] Upserted ${devices.length} devices.`);
 }
 
 main()
   .catch((error: unknown) => {
-    console.error("[db:seed] Falhou:", error);
+    console.error("[db:seed] Failed:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

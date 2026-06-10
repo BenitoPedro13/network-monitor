@@ -2,7 +2,7 @@
 
 **Author:** Benito Pedro  
 **Date:** 2026-06-09  
-**Status:** In Progress — Phase 1 Scoped  
+**Status:** Phase 1 Complete (2026-06-10) — Phase 2 next  
 **Scope:** Personal device monitoring (per-device DNS, not router-wide)
 
 ---
@@ -475,6 +475,8 @@ Registration is done via seed script or a future admin API. Each device must hav
 - Set a DHCP reservation in your router (bind MAC → IP), or
 - Configure a static IP in the device's OS network settings
 
+**Device DNS config:** DNS 1 = the monitoring host (`192.168.1.6`), **DNS 2 = the router** (`192.168.1.1`) as availability fallback — without DNS 2, the device loses internet whenever the host is asleep, rebooting, or away. The device's "Private DNS" (DoH/DoT) setting must be off or the monitoring host is bypassed entirely.
+
 **Recommended static IP range for registered devices:** `192.168.1.10 – 192.168.1.50`
 
 Example seed entries:
@@ -512,7 +514,7 @@ Example seed entries:
 - [x] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
 
 **Devices & Grafana**
-- [ ] Update seed script with real device IPs (MacBook, iPhone, iPad)
+- [x] Update seed script with real device IPs (MacBook loopback + LAN, Android phone)
 - [x] Add Grafana provisioning: `datasources/postgres.yaml`
 - [x] Add Grafana provisioning: `dashboards/overview.json`
 - [x] Add Grafana provisioning: `dashboards/device.json`
@@ -594,7 +596,7 @@ DNS-based monitoring captures domain lookups, not connections. Understanding the
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Host machine offline → DNS fails | High — internet breaks for all registered devices | Per-device scope limits blast radius to your devices only; router DNS is untouched |
+| Host machine offline → DNS fails | High — internet breaks for all registered devices | Devices set **DNS 2 = router** (`192.168.1.1`) as fallback — internet survives AdGuard outages at the cost of a small monitoring gap (Android may occasionally use DNS 2 even when DNS 1 is healthy). AdGuard runs as a launchd daemon (starts at boot, auto-restarts). Prevent Mac sleep on AC power. Permanent fix: Phase 5 always-on Pi |
 | Static IP drift (DHCP reassigns device IP) | Medium — events stored under wrong device or dropped | Set DHCP reservations in router for all monitored devices |
 | AdGuard wizard not completed | Collector cannot authenticate | Documented in bootstrap; collector fails fast with clear error |
 | High DnsEvent volume fills disk | Low initially, grows over time | Add a retention policy (cron job or Postgres partition) in Phase 2 |
