@@ -224,6 +224,55 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Risk" },
+            "properties": [
+              { "id": "custom.width", "value": 90 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "blue", "value": null },
+                    { "color": "yellow", "value": 31 },
+                    { "color": "orange", "value": 61 },
+                    { "color": "red", "value": 81 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Created" }]
+      },
+      "title": "Alert History",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  a.\"createdAt\" as \"Created\",\n  a.type as \"Type\",\n  a.status as \"Status\",\n  a.title as \"Title\",\n  a.\"riskScore\" as \"Risk\"\nFROM \"Alert\" a\nJOIN \"Device\" d ON a.\"deviceId\" = d.id\nWHERE d.name = '${device}'\nORDER BY a.\"createdAt\" DESC\nLIMIT 100",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "30s",

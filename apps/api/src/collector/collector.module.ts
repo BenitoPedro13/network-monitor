@@ -5,9 +5,10 @@ import { MapperService } from './mapper.service';
 import { CursorService } from './cursor.service';
 import { WriterService } from './writer.service';
 import { CollectorService } from './collector.service';
+import { AnomalyModule } from './anomaly/anomaly.module';
 
 @Module({
-  imports: [GeoModule],
+  imports: [GeoModule, AnomalyModule],
   providers: [PollService, MapperService, CursorService, WriterService, CollectorService],
 })
 export class CollectorModule {}

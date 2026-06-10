@@ -32,7 +32,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
       "id": 1,
       "options": {
         "colorMode": "background",
@@ -63,7 +63,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
       "id": 2,
       "options": {
         "colorMode": "background",
@@ -94,7 +94,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
       "id": 3,
       "options": {
         "colorMode": "background",
@@ -125,7 +125,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 0 },
       "id": 4,
       "options": {
         "colorMode": "background",
@@ -259,6 +259,86 @@
           "datasource": { "type": "postgres", "uid": "postgres-main" },
           "format": "table",
           "rawSql": "SELECT\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  count(*) as \"Queries\"\nFROM \"DnsEvent\" e\nLEFT JOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\n  AND e.\"responseIp\" IS NOT NULL\nGROUP BY g.country, g.isp\nORDER BY \"Queries\" DESC\nLIMIT 15",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Open Alerts",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) as value FROM \"Alert\" WHERE status = 'OPEN'",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Risk" },
+            "properties": [
+              { "id": "custom.width", "value": 90 },
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "blue", "value": null },
+                    { "color": "yellow", "value": 31 },
+                    { "color": "orange", "value": 61 },
+                    { "color": "red", "value": 81 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Risk" }]
+      },
+      "title": "Open Alerts",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  a.\"createdAt\" as \"Created\",\n  d.name as \"Device\",\n  a.type as \"Type\",\n  a.title as \"Title\",\n  a.\"riskScore\" as \"Risk\"\nFROM \"Alert\" a\nJOIN \"Device\" d ON a.\"deviceId\" = d.id\nWHERE a.status = 'OPEN'\nORDER BY a.\"riskScore\" DESC, a.\"createdAt\" DESC\nLIMIT 100",
           "refId": "A"
         }
       ]

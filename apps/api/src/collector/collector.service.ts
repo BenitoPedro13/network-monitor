@@ -6,6 +6,7 @@ import { CursorService } from './cursor.service';
 import { PollService } from './poll.service';
 import { MapperService } from './mapper.service';
 import { WriterService } from './writer.service';
+import { AnomalyService } from './anomaly/anomaly.service';
 
 @Injectable()
 export class CollectorService implements OnModuleInit {
@@ -19,6 +20,7 @@ export class CollectorService implements OnModuleInit {
     private readonly poll: PollService,
     private readonly mapper: MapperService,
     private readonly writer: WriterService,
+    private readonly anomaly: AnomalyService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -47,6 +49,7 @@ export class CollectorService implements OnModuleInit {
 
       if (mapped.length > 0) {
         await this.writer.write(mapped);
+        await this.anomaly.runRules(mapped);
       }
 
       const newest = events.reduce((max, e) => (e.time > max ? e.time : max), '');
