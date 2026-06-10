@@ -39,6 +39,9 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-network_monitor}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      POSTGRES_USER: ${POSTGRES_USER:-network_monitor}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-network_monitor}
+      POSTGRES_DB: ${POSTGRES_DB:-network_monitor}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

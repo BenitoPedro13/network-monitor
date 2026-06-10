@@ -1,0 +1,145 @@
+{
+  "annotations": { "list": [] },
+  "description": "World map of DNS destination IPs by country and city",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "keepTime": true,
+      "title": "← Overview",
+      "type": "link",
+      "url": "/d/network-monitor-overview"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#00cfff", "value": null },
+              { "color": "#ffaa00", "value": 50 },
+              { "color": "#ff4444", "value": 200 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "basemap": { "config": {}, "name": "Basemap", "type": "default" },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "size": {
+                "field": "query_count",
+                "fixed": 8,
+                "max": 30,
+                "min": 8
+              },
+              "color": {
+                "field": "query_count",
+                "fixed": "#00cfff"
+              },
+              "fillOpacity": 0.9,
+              "symbol": {
+                "fixed": "img/icons/marker/circle.svg",
+                "mode": "fixed"
+              }
+            },
+            "location": {
+              "latitude": "lat",
+              "longitude": "lon",
+              "mode": "coords"
+            },
+            "name": "DNS Destinations",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": { "mode": "details" },
+        "view": { "allLayers": true, "id": "zero", "lat": 20, "lon": 0, "zoom": 2 }
+      },
+      "title": "DNS Destination Map",
+      "type": "geomap",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  g.lat,\n  g.lon,\n  g.country,\n  g.city,\n  g.isp,\n  count(*) as query_count,\n  max(e.\"queriedAt\") as last_seen\nFROM \"DnsEvent\" e\nJOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\") AND g.lat IS NOT NULL\nGROUP BY g.lat, g.lon, g.country, g.city, g.isp\nORDER BY query_count DESC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Queries" },
+            "properties": [{ "id": "custom.width", "value": 90 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "lat" },
+            "properties": [{ "id": "custom.width", "value": 80 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "lon" },
+            "properties": [{ "id": "custom.width", "value": 80 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "id": 2,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Queries" }]
+      },
+      "title": "Destination Details",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.city, '') as \"City\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  COALESCE(g.asn, '') as \"ASN\",\n  count(*) as \"Queries\",\n  max(e.\"queriedAt\") as \"Last Seen\"\nFROM \"DnsEvent\" e\nJOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\nGROUP BY g.country, g.city, g.isp, g.asn\nORDER BY \"Queries\" DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "tags": ["network-monitor"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Network Monitor — World Map",
+  "uid": "network-monitor-geomap",
+  "version": 1
+}

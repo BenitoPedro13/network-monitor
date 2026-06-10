@@ -1,0 +1,258 @@
+{
+  "annotations": { "list": [] },
+  "description": "Per-device DNS drill-down",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "keepTime": true,
+      "title": "← Overview",
+      "type": "link",
+      "url": "/d/network-monitor-overview"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Total Queries",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) as value\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\") AND d.name = '${device}'",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Blocked Queries",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(*) as value\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\") AND d.name = '${device}' AND e.blocked = true",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "purple", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "title": "Unique Domains",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT COUNT(DISTINCT e.\"queriedHost\") as value\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\") AND d.name = '${device}'",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 4 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "title": "Query Timeline",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "time_series",
+          "rawSql": "SELECT\n  $__timeGroupAlias(e.\"queriedAt\", $__interval),\n  'queries' as metric,\n  count(*) as value\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\") AND d.name = '${device}'\nGROUP BY 1\nORDER BY 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Queries" },
+            "properties": [{ "id": "custom.width", "value": 90 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 12 },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Queries" }]
+      },
+      "title": "Top Domains",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  e.\"queriedHost\" as \"Domain\",\n  count(*) as \"Queries\"\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nWHERE $__timeFilter(e.\"queriedAt\") AND d.name = '${device}'\nGROUP BY e.\"queriedHost\"\nORDER BY \"Queries\" DESC\nLIMIT 20",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "postgres-main" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Queries" },
+            "properties": [{ "id": "custom.width", "value": 90 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 12 },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "footer": { "show": false },
+        "showHeader": true,
+        "sortBy": [{ "desc": true, "displayName": "Queries" }]
+      },
+      "title": "Destination Countries & ISPs",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-main" },
+          "format": "table",
+          "rawSql": "SELECT\n  COALESCE(g.country, 'Unknown') as \"Country\",\n  COALESCE(g.isp, 'Unknown') as \"ISP\",\n  count(*) as \"Queries\"\nFROM \"DnsEvent\" e\nJOIN \"Device\" d ON e.\"deviceId\" = d.id\nLEFT JOIN \"IpGeoCache\" g ON e.\"responseIp\" = g.ip\nWHERE $__timeFilter(e.\"queriedAt\")\n  AND d.name = '${device}'\n  AND e.\"responseIp\" IS NOT NULL\nGROUP BY g.country, g.isp\nORDER BY \"Queries\" DESC\nLIMIT 15",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["network-monitor"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "postgres", "uid": "postgres-main" },
+        "definition": "SELECT name FROM \"Device\" ORDER BY name",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Device",
+        "multi": false,
+        "name": "device",
+        "options": [],
+        "query": "SELECT name FROM \"Device\" ORDER BY name",
+        "refresh": 2,
+        "regex": "",
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Network Monitor — Per Device",
+  "uid": "network-monitor-device",
+  "version": 1
+}
