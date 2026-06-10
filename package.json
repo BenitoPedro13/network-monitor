@@ -15,6 +15,7 @@
     "dev": "pnpm --filter @network-monitor/api run dev",
     "test": "pnpm --filter @network-monitor/api run test",
     "test:infra": "bash ./scripts/test-infra.sh",
+    "geoip:update": "bash ./scripts/update-geoip.sh",
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {

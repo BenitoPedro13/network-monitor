@@ -44,8 +44,27 @@ model DnsEvent {
   deviceId    String
   device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
+  @@unique([deviceId, queriedAt, queriedHost])
   @@index([deviceId, queriedAt])
   @@index([queriedHost, queriedAt])
+}
+
+model IpGeoCache {
+  ip          String   @id
+  country     String?
+  countryCode String?
+  city        String?
+  lat         Float?
+  lon         Float?
+  asn         String?
+  isp         String?
+  resolvedAt  DateTime @default(now())
+}
+
+model SystemState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model Alert {

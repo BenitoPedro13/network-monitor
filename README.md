@@ -36,14 +36,16 @@ pnpm run bootstrap:full
 
 3. Complete the AdGuard Home wizard at `http://localhost:3000`, then set `ADGUARD_USER` and `ADGUARD_PASSWORD` in your `.env`.
 
-4. Download MaxMind GeoLite2 databases (free, requires registration at maxmind.com):
+4. Download MaxMind GeoLite2 databases (free, requires registration):
+   - Register at maxmind.com → Account → Manage License Keys → Create new key
+   - Add `MAXMIND_LICENSE_KEY=your_key` to `.env`
+   - Then run:
 
 ```bash
-# After setting MAXMIND_LICENSE_KEY in .env:
 pnpm run geoip:update
 ```
 
-Files are saved to `./geoip/` (gitignored). Update weekly for accurate geolocation data.
+Files (`GeoLite2-City.mmdb` ~60MB, `GeoLite2-ASN.mmdb` ~8MB) are saved to `./geoip/` (gitignored). Re-run weekly to keep geolocation data fresh.
 
 5. Validate DNS is working through AdGuard:
 
@@ -61,6 +63,7 @@ pnpm run infra:logs           # tail container logs
 pnpm run db:migrate           # run Prisma migrations
 pnpm run db:seed              # seed Device table with registered devices
 pnpm run typecheck            # typecheck all workspaces
+pnpm run geoip:update         # download/update MaxMind GeoLite2 .mmdb databases
 pnpm run test:infra           # smoke test — checks all services are healthy
 pnpm run test                 # unit tests for collector modules
 ```

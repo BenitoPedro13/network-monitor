@@ -81,6 +81,32 @@ pnpm run typecheck          # typecheck all workspaces
 
 ---
 
+## API Framework — NestJS
+
+`apps/api` uses **NestJS**. Always use the NestJS CLI to generate code — never create modules, services, controllers, or providers by hand.
+
+```bash
+# From apps/api/ directory:
+nest g module collector
+nest g service collector/geo
+nest g service collector/poll
+nest g service collector/mapper
+nest g service collector/cursor
+nest g service collector/writer
+nest g module prisma
+nest g service prisma
+```
+
+NestJS conventions:
+- Every domain area is a **module** (`@Module`)
+- Business logic lives in **services** (`@Injectable`)
+- The collector polling loop starts via `onModuleInit()` lifecycle hook
+- Prisma is wrapped in a `PrismaService` (extends `PrismaClient`) shared across modules
+- Use `ConfigModule` from `@nestjs/config` for env vars — never read `process.env` directly outside of config
+- Use `@nestjs/schedule` for the GeoIP auto-updater interval (replaces `setInterval`)
+
+---
+
 ## Coding Conventions
 
 - **TypeScript strict mode** everywhere — no `any`, no type assertions without comment

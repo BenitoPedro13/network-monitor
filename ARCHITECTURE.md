@@ -489,15 +489,15 @@ Example seed entries:
 ### Phase 1 — Foundation (current scope)
 
 **Infrastructure**
-- [ ] Add Grafana + provisioning scaffold to `docker-compose.yml`
-- [ ] Add `ADGUARD_USER`, `ADGUARD_PASSWORD`, `MAXMIND_LICENSE_KEY`, `GRAFANA_*` vars to `.env.example`
-- [ ] Create `./geoip/` directory (gitignored), document download steps in README
+- [x] Add Grafana + provisioning scaffold to `docker-compose.yml`
+- [x] Add `ADGUARD_USER`, `ADGUARD_PASSWORD`, `MAXMIND_LICENSE_KEY`, `GRAFANA_*` vars to `.env.example`
+- [x] Create `./geoip/` directory (gitignored), document download steps in README
 
 **Database**
-- [ ] Add `IpGeoCache` model to Prisma schema
-- [ ] Add `SystemState` model to Prisma schema (collector cursor persistence)
-- [ ] Add unique constraint `(deviceId, queriedAt, queriedHost)` to `DnsEvent` (dedup guard)
-- [ ] Run migration: `pnpm db:migrate`
+- [x] Add `IpGeoCache` model to Prisma schema
+- [x] Add `SystemState` model to Prisma schema (collector cursor persistence)
+- [x] Add unique constraint `(deviceId, queriedAt, queriedHost)` to `DnsEvent` (dedup guard)
+- [x] Run migration: `pnpm db:migrate`
 
 **Collector**
 - [ ] Install `maxmind` npm package in `apps/api`
