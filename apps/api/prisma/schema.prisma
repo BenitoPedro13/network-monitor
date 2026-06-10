@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AlertType {
+  UNKNOWN_DOMAIN
+  HIGH_FREQUENCY
+  THREAT_MATCH
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+model Device {
+  id          String     @id @default(cuid())
+  name        String
+  ipAddress   String     @unique
+  macAddress  String?    @unique
+  owner       String?
+  deviceType  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  dnsEvents   DnsEvent[]
+  alerts      Alert[]
+}
+
+model DnsEvent {
+  id          String   @id @default(cuid())
+  queriedHost String
+  queryType   String   @default("A")
+  sourceIp    String
+  responseIp  String?
+  blocked     Boolean  @default(false)
+  queriedAt   DateTime
+  createdAt   DateTime @default(now())
+  deviceId    String
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, queriedAt])
+  @@index([queriedHost, queriedAt])
+}
+
+model Alert {
+  id          String      @id @default(cuid())
+  type        AlertType
+  status      AlertStatus @default(OPEN)
+  title       String
+  description String?
+  riskScore   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deviceId    String
+  device      Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, status])
+}

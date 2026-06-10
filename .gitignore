@@ -27,6 +27,9 @@ adguardhome/work/
 adguardhome/conf/
 postgres-data/
 
+# MaxMind GeoLite2 binary databases (download separately, see README)
+geoip/*.mmdb
+
 # IDE
 .vscode/
 .idea/

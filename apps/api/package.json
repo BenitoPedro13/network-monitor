@@ -5,12 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate": "prisma migrate dev --name init",
+    "db:generate": "prisma generate",
     "db:seed": "tsx scripts/seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test"
+    "test": "tsx --test tests/**/*.test.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.15.18"
+    "@types/node": "^22.15.18",
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
   }
 }

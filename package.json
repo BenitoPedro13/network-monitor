@@ -4,14 +4,17 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.28.1",
   "scripts": {
-    "bootstrap": "pnpm run infra:up && pnpm install && pnpm run db:migrate",
+    "bootstrap": "bash ./scripts/bootstrap.sh",
+    "bootstrap:full": "bash ./scripts/bootstrap.sh --with-adguard",
     "infra:up": "docker compose up -d",
+    "infra:up:postgres": "docker compose up -d postgres",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f --tail=100",
     "db:migrate": "pnpm --filter @network-monitor/api run db:migrate",
     "db:seed": "pnpm --filter @network-monitor/api run db:seed",
     "dev": "pnpm --filter @network-monitor/api run dev",
     "test": "pnpm --filter @network-monitor/api run test",
+    "test:infra": "bash ./scripts/test-infra.sh",
     "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
