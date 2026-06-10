@@ -2,7 +2,7 @@
 
 **Phase:** 2 — Monitoring Coverage (flow layer)  
 **Group:** Anomaly + Grafana  
-**Status:** In Progress  
+**Status:** Done  
 **Date:** 2026-06-10
 
 ---
@@ -59,7 +59,7 @@ Also add a `NO_DNS_CONNECTION` slice to the existing Open Alerts panels (no pane
 - The first threshold is 5 no-DNS flows to the same destination within 5 minutes; alerts are deduped by `(deviceId, title)` for 24 hours.
 - The new flow dashboard is intentionally IP-first: destination IP, SNI, country/ISP, bytes, port/protocol, and no-DNS provenance are all visible without opening SQL.
 - Prisma migration `20260610194344_add_no_dns_connection_alert` was created via `prisma migrate dev --name add_no_dns_connection_alert` and applied successfully.
-- Verified so far: Postgres enum includes `NO_DNS_CONNECTION`, dashboard JSON parses, Grafana registered `network-monitor-flows`, `pnpm run typecheck` is clean, and `pnpm run test` is 34/34 green.
+- Verified: Postgres enum includes `NO_DNS_CONNECTION`, dashboard JSON parses, Grafana registered `network-monitor-flows`, `pnpm run typecheck` is clean, `pnpm run test` is 34/34 green, and the user confirmed the dashboard review.
 
 ## How to Verify
 

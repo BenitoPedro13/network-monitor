@@ -569,11 +569,11 @@ DNS-only monitoring has structural blind spots: apps using DNS-over-HTTPS (DoH) 
 - Forces Chromium/Electron apps (Discord, Chrome, VS Code) to fall back to plain DNS through AdGuard
 - Coverage measure, not anti-evasion: custom/unknown DoH endpoints require flow-level detection (Phase 5). After 2a, any remaining encrypted-DNS use is itself a suspicion signal
 
-**2b — Network flow capture (Zeek sensor)** — Task 19 done 2026-06-10; Task 20 in progress; Task 21 planned
+**2b — Network flow capture (Zeek sensor)** — Tasks 19–20 done 2026-06-10; Task 21 planned
 - **Zeek** runs as a passive sensor on `en0` → `conn.log` (flows) + `ssl.log` (TLS SNI hostnames). One tool replaces the old standalone "SNI extraction" idea; its `ssl.log` *is* the SNI extractor and its `conn.log` *is* the flow log.
 - New `NetworkFlow` table (§4.5); ingest via a NestJS `flow/` module mirroring the collector; geo via shared `IpGeoCache`.
 - **Task 19** ✅ Done 2026-06-10 — sensor + schema + ingest (Mac's own traffic; passive, always-on-safe, no availability risk).
-- **Task 20** — `NO_DNS_CONNECTION` rule (connections with no DNS provenance) + Grafana flow dashboard. Implementation is in progress pending dashboard review.
+- **Task 20** ✅ Done 2026-06-10 — `NO_DNS_CONNECTION` rule (connections with no DNS provenance) + Grafana flow dashboard.
 - **Task 21** — gateway investigation mode: route the phone *through* the Mac (pf NAT) so the same sensor sees its traffic. On-demand only — the phone depends on the Mac while enabled.
 
 **2c — Anomaly rules** ✅ Done 2026-06-10 — pulled forward into Phase 1 (Task 11)
@@ -629,7 +629,7 @@ DNS-based monitoring captures domain lookups, not connections. Understanding the
 **What Phase 2 adds:**
 - 2a (done): blocking DoH providers forces most apps back to plain DNS → surfaces Discord, Chrome, Electron apps; remaining encrypted-DNS use becomes a suspicion signal
 - 2b Task 19 (done): Zeek flow capture on `en0` records WebRTC/UDP media, DoH-by-IP, and DNS-less connections for the **Mac**; `ssl.log` recovers TLS SNI hostnames; `hadDnsQuery` flags connections with no DNS provenance
-- 2b Task 20 (in progress): flow dashboard exposes destination IPs, SNI, bytes, ports/protocols, and no-DNS-provenance tables; `NO_DNS_CONNECTION` alerts fire on repeated no-DNS flows to the same public IP
+- 2b Task 20 (done): flow dashboard exposes destination IPs, SNI, bytes, ports/protocols, and no-DNS-provenance tables; `NO_DNS_CONNECTION` alerts fire on repeated no-DNS flows to the same public IP
 - 2b/Task 21: routing the phone through the Mac extends all of the above to the phone, on-demand
 
 **What still requires Phase 5 (Pi gateway):**

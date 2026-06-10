@@ -97,6 +97,5 @@ sudo scripts/zeek-sensor.sh start|stop # passive flow sensor control (Zeek on en
 
 Phase 1 (DNS pipeline), Phase 2a (DoH blocking), and Phase 2b flow capture for the Mac (Task 19, see above) are complete. Planned next — see `docs/tasks/` and `ARCHITECTURE.md`:
 
-- **Detection + dashboards (Task 20):** in progress — the `NO_DNS_CONNECTION` anomaly rule and a Grafana flow dashboard on top of the `NetworkFlow` data.
 - **Gateway investigation mode (Task 21):** optionally route another device (the phone) *through* the Mac so the same sensor sees its traffic. On-demand only — the routed device depends on the Mac while enabled.
 - **Phase 5:** move the stack to an always-on Raspberry Pi gateway for network-wide capture without the per-device routing tradeoff.
