@@ -52,6 +52,7 @@ export class PollService {
     const data = body.data;
     this.logger.debug(`Fetched ${data.length} raw events from AdGuard`);
     if (!cursor) return data;
-    return data.filter((e) => e.time > cursor);
+    const cursorMs = new Date(cursor).getTime();
+    return data.filter((e) => new Date(e.time).getTime() > cursorMs);
   }
 }
