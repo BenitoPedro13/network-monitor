@@ -23,8 +23,8 @@ services:
     restart: unless-stopped
     ports:
       - "${ADGUARD_WEB_PORT:-3000}:3000"
-      - "${ADGUARD_DNS_PORT:-18053}:53/tcp"
-      - "${ADGUARD_DNS_PORT:-18053}:53/udp"
+      - "${ADGUARD_DNS_PORT:-53}:53/tcp"
+      - "${ADGUARD_DNS_PORT:-53}:53/udp"
     volumes:
       - ./adguardhome/work:/opt/adguardhome/work
       - ./adguardhome/conf:/opt/adguardhome/conf
