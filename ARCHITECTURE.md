@@ -500,10 +500,10 @@ Example seed entries:
 - [x] Run migration: `pnpm db:migrate`
 
 **Collector**
-- [ ] Install `maxmind` npm package in `apps/api`
-- [ ] Build `collector/geo/` module (lookup + cache)
-- [ ] Build `collector/poll.ts` (AdGuard API fetch)
-- [ ] Build `collector/mapper.ts` (AdGuard event → DnsEvent shape)
+- [x] Install `maxmind` npm package in `apps/api`
+- [x] Build `collector/geo/` module (lookup + cache)
+- [x] Build `collector/poll.ts` (AdGuard API fetch)
+- [x] Build `collector/mapper.ts` (AdGuard event → DnsEvent shape)
 - [ ] Build `collector/cursor.ts` (SystemState read/write)
 - [ ] Build `collector/writer.ts` (bulk insert with geo enrichment)
 - [ ] Build `collector/anomaly/` rules (unknownDomain, highFrequency, threatMatch)
